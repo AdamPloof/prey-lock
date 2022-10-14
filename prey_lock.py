@@ -1,16 +1,24 @@
 import json
 from camera import Camera
+from motion_detector import MotionDetector
 
-if __name__ == '__main__':
+def main():
     with open('env.json') as config_file:
         config = json.load(config_file)
 
-    RTSP_URL = f"rtsp://{config['USER']}:{config['PASS']}@{config['RTSP_URL']}"
+    RTSP = f"rtsp://{config['USER']}:{config['PASS']}@{config['RTSP_URL']}"
 
-    cam = Camera(RTSP_URL)
+    cam = Camera(RTSP)
+    detector = MotionDetector()
 
     while True:
         try:
-            cam.show_frame()
+            frame = cam.get_frame()
+            detector.load_frame(frame)
+            detector.compare()
+            detector.show_diff()
         except AttributeError:
             pass
+
+if __name__ == '__main__':
+    main()
