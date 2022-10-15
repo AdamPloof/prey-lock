@@ -1,5 +1,6 @@
 import json
 from camera import Camera
+import time
 from motion_detector import MotionDetector
 
 def main():
@@ -10,13 +11,25 @@ def main():
 
     cam = Camera(RTSP)
     detector = MotionDetector()
+    detector.debug = True
+    frame_cnt = 0
 
     while True:
         try:
             frame = cam.get_frame()
-            detector.load_frame(frame)
-            detector.compare()
-            detector.show_diff()
+            frame_cnt += 1
+
+            # Have detector only checking difference every n number of frames.
+            if frame_cnt % cam.FPS == 0:
+                detector.load_frame(frame)
+
+            if detector.movement_detected():
+                cam.draw_text('Movement detected!', (0, 255, 0))
+            else:
+                cam.draw_text('No movement detected!', (255, 0, 0))
+
+            # detector.show_diff()
+            cam.show_frame()
         except AttributeError:
             pass
 

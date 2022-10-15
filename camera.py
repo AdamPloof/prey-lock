@@ -5,6 +5,9 @@ import sys
 
 
 class Camera():
+    FPS = 30
+    FPS_MS = int((1 / FPS) * 1000)
+
     def __init__(self, src):
         self.capture = cv2.VideoCapture(src)
         self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 2)
@@ -12,11 +15,6 @@ class Camera():
         self.frame_ready = False
         self.frame = None
         self.previous_frame = None
-
-        # FPS = 1/x
-        # X = desired FPS
-        self.FPS = 1/30
-        self.FPS_MS = int(self.FPS * 1000)
 
         # Start frame retrieval thread
         self.thread = threading.Thread(target=self.update, args=())
@@ -32,13 +30,31 @@ class Camera():
             if not self.frame_ready:
                 self.frame_ready = True
 
-            time.sleep(self.FPS)
+            time.sleep(1 / Camera.FPS)
+
+    def draw_text(self, text, color):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        scale = 1
+        thickness = 2
+        line_type = 2
+
+        center = round(self.frame.shape[1] / 2)  - round(cv2.getTextSize(text, fontFace=font, fontScale=scale, thickness=thickness)[0][0] / 2)
+        bottom_left = (center, 50)
+
+        cv2.putText(self.frame, text, 
+            org=bottom_left,
+            fontFace=font,
+            fontScale=scale,
+            color=color,
+            thickness=thickness,
+            lineType=line_type
+        )
 
     def show_frame(self):
         if self.frame_ready:
             cv2.imshow('Cam', self.frame)
         
-        if cv2.waitKey(self.FPS_MS) == 27:
+        if cv2.waitKey(Camera.FPS_MS) == 27:
             self.clean_up()
 
     def get_frame(self):
