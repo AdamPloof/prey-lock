@@ -20,7 +20,7 @@ def main():
             frame_cnt += 1
 
             # Have detector only checking difference every n number of frames.
-            if frame_cnt % cam.FPS == 0:
+            if frame_cnt % (cam.FPS / 2) == 0:
                 detector.load_frame(frame)
 
             if detector.movement_detected():
