@@ -49,7 +49,7 @@ class MotionDetector():
         if cv2.waitKey(Camera.FPS_MS) == 27:
             self.clean_up()
 
-    def movement_detected(self):
+    def movement_detected(self) -> bool:
         thresh_frame = self.get_threshold()
         if thresh_frame is None:
             return False
