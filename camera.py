@@ -25,7 +25,7 @@ class Camera():
         while True:
             if self.capture.isOpened():
                 (ret, raw_frame) = self.capture.read()
-                self.frame = self.prepare_frame(raw_frame)
+                self.frame = raw_frame
                 
             if not self.frame_ready:
                 self.frame_ready = True
@@ -50,6 +50,11 @@ class Camera():
             lineType=line_type
         )
 
+    def draw_rect(self, x, y, width, height):
+        top_left = (x, y)
+        bottom_right = (x + width, y + height)
+        cv2.rectangle(self.frame, top_left, bottom_right, (0,255, 0), 2)
+
     def show_frame(self):
         if self.frame_ready:
             cv2.imshow('Cam', self.frame)
@@ -62,12 +67,6 @@ class Camera():
             return None
 
         return self.frame
-
-    def prepare_frame(self, frame):
-        frame_bw = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        prepared_frame =  cv2.GaussianBlur(frame_bw, ksize=(5, 5), sigmaX=0)
-
-        return prepared_frame
 
     def clean_up(self):
         cv2.destroyAllWindows()

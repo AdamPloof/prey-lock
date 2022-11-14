@@ -20,7 +20,13 @@ class MotionDetector():
         if self.current_frame is not None:
             self.prev_frame = self.current_frame
 
-        self.current_frame = frame
+        self.current_frame = self.prepare_frame(frame) if frame is not None else frame
+
+    def prepare_frame(self, frame):
+        frame_bw = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        prepared_frame =  cv2.GaussianBlur(frame_bw, ksize=(5, 5), sigmaX=0)
+
+        return prepared_frame
 
     def get_threshold(self):
         if self.prev_frame is None:
