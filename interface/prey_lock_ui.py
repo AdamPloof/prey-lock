@@ -4,6 +4,9 @@ from tkinter import ttk
 
 class PreyLockUI:
     def __init__(self) -> None:
+        self.edit_zone_edit_active = False
+        self.edit_zone_id = None
+
         self.root = Tk()
         self.root.title('Cat Dector')
 
@@ -19,7 +22,7 @@ class PreyLockUI:
         self.canvas = Canvas(mainframe)
         self.canvas.grid(column=0, row=0, columnspan=4, rowspan=4, sticky=(N, S, E, W), pady=(0, 12))
 
-        self.zone_select_btn = ttk.Button(mainframe, text='Edit Detection Zone', command=self.activateDetectionZoneEdit)
+        self.zone_select_btn = ttk.Button(mainframe, text='Edit Detection Zone', command=self.toggle_detection_zone_edit)
         self.zone_select_btn.grid(column=0, row=5, rowspan=2, sticky=(W, N))
 
         self.motion_detected_label = ttk.Label(mainframe, text='No motion detected')
@@ -32,10 +35,17 @@ class PreyLockUI:
         self.sensitivity.grid(column=0, row=8, sticky=(W, E), padx=40)
         self.sensitivity.set(20)
 
-    def activateDetectionZoneEdit(self):
-        pass
+    def toggle_detection_zone_edit(self):
+        if not self.edit_zone_edit_active:
+            self.edit_zone_id = self.canvas.create_rectangle(0, 40, 200, 200, fill='gray', outline='black')
+            self.edit_zone_edit_active = True
+        elif self.edit_zone_id is not None:
+            self.canvas.delete(self.edit_zone_id)
+            self.edit_zone_edit_active = False
+        else:
+            self.edit_zone_edit_active = False
 
-    
+
     def run(self):
         self.root.mainloop()
 
