@@ -6,6 +6,12 @@ class DetectionZoneMonitor:
         self.canvas = Canvas(container)
         self.canvas.grid(column=0, row=0, columnspan=4, rowspan=4, sticky=(N, S, E, W), pady=(0, 12))
 
+        self.resize_mousedown = False
+        self.drag_start_x: int = -1
+        self.drag_start_y: int = -1
+        self.drag_current_x: int = -1
+        self.drag_current_y: int = -1
+
         # These are actually the IDs of the canvas items.
         self.detection_zone: int = None
         self.resize_controls: dict = {
@@ -49,7 +55,13 @@ class DetectionZoneMonitor:
 
     def listen_for_resize(self):
         for cntrl in self.resize_controls.values():
-            self.canvas.tag_bind(cntrl, '<B1-Motion>', self.resize_detection_zone)
+            self.canvas.tag_bind(cntrl, '<ButtonPress-1>', self.mousedown)
+            self.canvas.tag_bind(cntrl, '<ButtonRelease-1>', self.mouseup)
+
+            def resize_handler(event, self=self, cntrl=cntrl):
+                return self.resize_detection_zone(event, cntrl)
+
+            self.canvas.tag_bind(cntrl, '<B1-Motion>', resize_handler)
         
     def activate(self):
         dzone_coodinates = self.detection_zone_coordinates()
@@ -65,7 +77,55 @@ class DetectionZoneMonitor:
             self.canvas.delete(v)
             self.resize_controls[k] = None
 
-    # TODO: Actually resize. Can restrict the direction of resizing based on which control is being moved.
-    # E.g. if the top control is moving only pay attention to the change in y.
-    def resize_detection_zone(self, e):
-        print(f'x: {e.x}, y: {e.y}')
+    def mousedown(self, e):
+        self.resize_mousedown = True
+        self.drag_start_x = e.x
+        self.drag_start_y = e.y
+        self.drag_current_x = e.x
+        self.drag_current_y = e.y
+
+    def mouseup(self, e):
+        self.resize_mousedown = False
+        self.drag_start_x = -1
+        self.drag_start_y = -1
+
+    # TODO: Prevent resizing beyond 0 width or height and the edge of the window.
+    # Also, continually recenter controls on resize.
+    def resize_detection_zone(self, e, cntrl):
+        if self.drag_start_x == -1 or self.drag_start_y == -1:
+            raise Exception('Drag start not registered. Something weird happened.')
+
+        # Swapping keys for values to make it easier to look up which control we're dealing with.
+        cntrls = {v: k for k, v in self.resize_controls.items()}
+        if cntrls[cntrl] == 'top' or cntrls[cntrl] == 'bottom':
+            self.drag_current_y = e.y
+            amt = self.drag_current_y - self.drag_start_y
+            self.resize_y(amt, cntrl)
+            self.drag_start_y = e.y
+        else:
+            self.drag_current_x = e.x
+            amt = self.drag_current_x - self.drag_start_x
+            self.resize_x(amt, cntrl)
+            self.drag_start_x = e.x
+
+    def resize_x(self, amt, cntrl):
+        new_coords = list(self.canvas.coords(self.detection_zone))
+        if self.resize_controls['left'] == cntrl:
+            new_coords[0] += amt
+        else:
+            new_coords[2] += amt
+
+        self.canvas.coords(self.detection_zone, *new_coords)
+        self.canvas.move(cntrl, amt, 0)
+
+    def resize_y(self, amt, cntrl):
+        new_coords = list(self.canvas.coords(self.detection_zone))
+        if self.resize_controls['top'] == cntrl:
+            new_coords[1] += amt
+        else:
+            new_coords[3] += amt
+
+        self.canvas.coords(self.detection_zone, *new_coords)
+        self.canvas.move(cntrl, 0, amt)
+
+
