@@ -2,6 +2,11 @@ from tkinter import *
 from tkinter import ttk
 
 class DetectionZoneMonitor:
+    # The smallest the window can be resized to for each axis
+    RESIZE_MIN_THRESHOLD = 50
+    # The radius of the resize controls
+    RESIZE_CNTRL_RAD = 10
+    
     def __init__(self, container) -> None:
         self.canvas = Canvas(container)
         self.canvas.grid(column=0, row=0, columnspan=4, rowspan=4, sticky=(N, S, E, W), pady=(0, 12))
@@ -41,16 +46,16 @@ class DetectionZoneMonitor:
     def draw_resize_controls(self):
         coords = self.canvas.coords(self.detection_zone)
 
-        top = (((coords[0] + coords[2]) / 2) - 10, coords[1] - 10, ((coords[0] + coords[2]) / 2) + 10, coords[1] + 10)
+        top = (((coords[0] + coords[2]) / 2) - self.RESIZE_CNTRL_RAD, coords[1] - self.RESIZE_CNTRL_RAD, ((coords[0] + coords[2]) / 2) + self.RESIZE_CNTRL_RAD, coords[1] + self.RESIZE_CNTRL_RAD)
         self.resize_controls['top'] = self.canvas.create_oval(*top, fill='blue', outline='gray')
 
-        bottom = (((coords[0] + coords[2]) / 2) - 10, coords[3] + 10, ((coords[0] + coords[2]) / 2) + 10, coords[3] - 10)
+        bottom = (((coords[0] + coords[2]) / 2) - self.RESIZE_CNTRL_RAD, coords[3] + self.RESIZE_CNTRL_RAD, ((coords[0] + coords[2]) / 2) + self.RESIZE_CNTRL_RAD, coords[3] - self.RESIZE_CNTRL_RAD)
         self.resize_controls['bottom'] = self.canvas.create_oval(*bottom, fill='blue', outline='gray')
 
-        left = (coords[0] + 10, ((coords[1] + coords[3]) / 2) + 10, coords[0] - 10, ((coords[1] + coords[3]) / 2) - 10)
+        left = (coords[0] + self.RESIZE_CNTRL_RAD, ((coords[1] + coords[3]) / 2) + self.RESIZE_CNTRL_RAD, coords[0] - self.RESIZE_CNTRL_RAD, ((coords[1] + coords[3]) / 2) - self.RESIZE_CNTRL_RAD)
         self.resize_controls['left'] = self.canvas.create_oval(*left, fill='blue', outline='gray')
 
-        right = (coords[2] + 10, ((coords[1] + coords[3]) / 2) + 10, coords[2] - 10, ((coords[1] + coords[3]) / 2) - 10)
+        right = (coords[2] + self.RESIZE_CNTRL_RAD, ((coords[1] + coords[3]) / 2) + self.RESIZE_CNTRL_RAD, coords[2] - self.RESIZE_CNTRL_RAD, ((coords[1] + coords[3]) / 2) - self.RESIZE_CNTRL_RAD)
         self.resize_controls['right'] = self.canvas.create_oval(*right, fill='blue', outline='gray')
 
     def listen_for_resize(self):
@@ -89,11 +94,10 @@ class DetectionZoneMonitor:
         self.drag_start_x = -1
         self.drag_start_y = -1
 
-    # TODO: Prevent resizing beyond 0 width or height and the edge of the window.
-    # Also, continually recenter controls on resize.
+    # TODO: Prevent resizing beyond the width of the canvas.
     def resize_detection_zone(self, e, cntrl):
         if self.drag_start_x == -1 or self.drag_start_y == -1:
-            raise Exception('Drag start not registered. Something weird happened.')
+            return
 
         # Swapping keys for values to make it easier to look up which control we're dealing with.
         cntrls = {v: k for k, v in self.resize_controls.items()}
@@ -115,8 +119,13 @@ class DetectionZoneMonitor:
         else:
             new_coords[2] += amt
 
+        # Prevent user from resizing beyond the min threshold size
+        if (new_coords[2] - new_coords[0]) < self.RESIZE_MIN_THRESHOLD:
+            return
+
         self.canvas.coords(self.detection_zone, *new_coords)
         self.canvas.move(cntrl, amt, 0)
+        self.center_resize_cntrls('x')
 
     def resize_y(self, amt, cntrl):
         new_coords = list(self.canvas.coords(self.detection_zone))
@@ -125,7 +134,53 @@ class DetectionZoneMonitor:
         else:
             new_coords[3] += amt
 
+        # Prevent user from resizing beyond the min threshold size
+        if (new_coords[3] - new_coords[1]) < self.RESIZE_MIN_THRESHOLD:
+            return
+
         self.canvas.coords(self.detection_zone, *new_coords)
         self.canvas.move(cntrl, 0, amt)
+        self.center_resize_cntrls('y')
 
+    # TODO: Clean this up?
+    def center_resize_cntrls(self, axis: str):
+        center_coords = self.canvas.coords(self.detection_zone)
+        if axis == 'x':
+            # Recenter x controls
+            center_x = round((center_coords[0] + center_coords[2]) / 2)
+            center_coords[0] = center_x
+            center_coords[2] = center_x
+
+            top_x_coords = center_coords.copy()
+            top_x_coords[0] = center_coords[0] - self.RESIZE_CNTRL_RAD
+            top_x_coords[1] = center_coords[1] - self.RESIZE_CNTRL_RAD
+            top_x_coords[2] = center_coords[2] + self.RESIZE_CNTRL_RAD
+            top_x_coords[3] = center_coords[1] + self.RESIZE_CNTRL_RAD
+            self.canvas.coords(self.resize_controls['top'], *top_x_coords)
+
+            bottom_x_coords = center_coords.copy()
+            bottom_x_coords[0] = center_coords[0] - self.RESIZE_CNTRL_RAD
+            bottom_x_coords[1] = center_coords[3] - self.RESIZE_CNTRL_RAD
+            bottom_x_coords[2] = center_coords[2] + self.RESIZE_CNTRL_RAD
+            bottom_x_coords[3] = center_coords[3] + self.RESIZE_CNTRL_RAD
+            self.canvas.coords(self.resize_controls['bottom'], *bottom_x_coords)
+        else:
+            # Recenter y controls
+            center_y = round((center_coords[1] + center_coords[3]) / 2)
+            center_coords[1] = center_y
+            center_coords[3] = center_y
+
+            left_y_coords = center_coords.copy()
+            left_y_coords[0] = center_coords[0] - self.RESIZE_CNTRL_RAD
+            left_y_coords[1] = center_coords[1] - self.RESIZE_CNTRL_RAD
+            left_y_coords[2] = center_coords[0] + self.RESIZE_CNTRL_RAD
+            left_y_coords[3] = center_coords[3] + self.RESIZE_CNTRL_RAD
+            self.canvas.coords(self.resize_controls['left'], *left_y_coords)
+
+            right_y_coords = center_coords.copy()
+            right_y_coords[0] = center_coords[2] - self.RESIZE_CNTRL_RAD
+            right_y_coords[1] = center_coords[1] - self.RESIZE_CNTRL_RAD
+            right_y_coords[2] = center_coords[2] + self.RESIZE_CNTRL_RAD
+            right_y_coords[3] = center_coords[3] + self.RESIZE_CNTRL_RAD
+            self.canvas.coords(self.resize_controls['right'], *right_y_coords)
 
