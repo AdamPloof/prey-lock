@@ -38,6 +38,36 @@ class DetectionZoneMonitor:
             'bottomright': (.8, .8)
         }
 
+    # TODO: Make use of resize_x and resize_y to get the benefit of constraining to canvas size etc.
+    # Can already tell we're going to need to use some timeouts or something to make this look smooth. Particularly recentering
+    # the resize controls is pretty bad.
+    def scale_detection_zone(self, event):
+        detection_coords = list(self.canvas.coords(self.detection_zone))
+        w_delta = (event.width - self.last_canvas_dim['width'])
+        if w_delta != 0:
+            w_scale = w_delta / self.last_canvas_dim['width']
+            detection_coords[0] -= (detection_coords[0] * w_scale) / 2
+            detection_coords[2] += (detection_coords[2] * w_scale) / 2
+
+        h_delta = (event.height - self.last_canvas_dim['height'])
+        if h_delta != 0:
+            h_scale = h_delta / self.last_canvas_dim['height']
+            detection_coords[1] -= (detection_coords[1] * h_scale) / 2
+            detection_coords[3] += (detection_coords[3] * h_scale) / 2
+
+        self.canvas.coords(self.detection_zone, *detection_coords)
+
+        if w_delta != 0:
+            self.center_resize_cntrls('x')
+
+        if h_delta != 0:
+            self.center_resize_cntrls('y')
+
+        self.last_canvas_dim = {
+            'width': event.width,
+            'height': event.height,
+        }
+
     def detection_zone_coordinates(self):
         canvas_w = self.canvas.winfo_width()
         canvas_h = self.canvas.winfo_height()
@@ -81,6 +111,12 @@ class DetectionZoneMonitor:
         self.detection_zone = self.canvas.create_rectangle(*dzone_coodinates, fill='gray', outline='black', tags=(self.DETECTION_ZONE_TAG,))
         self.draw_resize_controls()
         self.listen_for_resize()
+
+        self.canvas.bind('<Configure>', self.scale_detection_zone)
+        self.last_canvas_dim = {
+            'width': self.canvas.winfo_width(),
+            'height': self.canvas.winfo_height(),
+        }
 
     def deactivate(self):
         self.canvas.delete(self.detection_zone)
