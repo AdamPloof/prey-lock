@@ -33,34 +33,21 @@ class DetectionZoneMonitor:
 
         # detection_zone_coord coordinates normalized to 0.0 to 1.0 scale of current canvas size
         # rather than absolute pixel values. E.g. (.5, .5) would be the center of the canvas.
-        self.detection_zone_coord = {
+        self.detection_zone_props = {
             'topleft': (0.2, 0.2),
             'bottomright': (.8, .8)
         }
 
-    # TODO: Make use of resize_x and resize_y to get the benefit of constraining to canvas size etc.
-    # Can already tell we're going to need to use some timeouts or something to make this look smooth. Particularly recentering
-    # the resize controls is pretty bad.
+        self.canvas_area = 0
+
     def scale_detection_zone(self, event):
-        detection_coords = list(self.canvas.coords(self.detection_zone))
         w_delta = (event.width - self.last_canvas_dim['width'])
-        if w_delta != 0:
-            w_scale = w_delta / self.last_canvas_dim['width']
-            detection_coords[0] -= (detection_coords[0] * w_scale) / 2
-            detection_coords[2] += (detection_coords[2] * w_scale) / 2
-
         h_delta = (event.height - self.last_canvas_dim['height'])
-        if h_delta != 0:
-            h_scale = h_delta / self.last_canvas_dim['height']
-            detection_coords[1] -= (detection_coords[1] * h_scale) / 2
-            detection_coords[3] += (detection_coords[3] * h_scale) / 2
-
+        detection_coords = self.detection_zone_coordinates()
         self.canvas.coords(self.detection_zone, *detection_coords)
 
-        if w_delta != 0:
+        if w_delta != 0 or h_delta != 0:
             self.center_resize_cntrls('x')
-
-        if h_delta != 0:
             self.center_resize_cntrls('y')
 
         self.last_canvas_dim = {
@@ -72,8 +59,8 @@ class DetectionZoneMonitor:
         canvas_w = self.canvas.winfo_width()
         canvas_h = self.canvas.winfo_height()
 
-        top_left = (self.detection_zone_coord['topleft'][0] * canvas_w, self.detection_zone_coord['topleft'][1] * canvas_h)
-        bottom_right = (self.detection_zone_coord['bottomright'][0] * canvas_w, self.detection_zone_coord['bottomright'][1] * canvas_h)
+        top_left = (self.detection_zone_props['topleft'][0] * canvas_w, self.detection_zone_props['topleft'][1] * canvas_h)
+        bottom_right = (self.detection_zone_props['bottomright'][0] * canvas_w, self.detection_zone_props['bottomright'][1] * canvas_h)
         dzone_coordinates = tuple(round(x) for x in top_left) + tuple(round(x) for x in bottom_right)
 
         return dzone_coordinates
@@ -117,6 +104,7 @@ class DetectionZoneMonitor:
             'width': self.canvas.winfo_width(),
             'height': self.canvas.winfo_height(),
         }
+        self.canvas_area = self.canvas.winfo_width() * self.canvas.winfo_height()
 
     def deactivate(self):
         self.canvas.delete(self.detection_zone)
@@ -138,7 +126,6 @@ class DetectionZoneMonitor:
         self.drag_start_x = -1
         self.drag_start_y = -1
 
-    # TODO: Prevent resizing beyond the width of the canvas.
     def resize_detection_zone(self, e, cntrl):
         if self.drag_start_x == -1 or self.drag_start_y == -1:
             return
@@ -155,6 +142,8 @@ class DetectionZoneMonitor:
             amt = self.drag_current_x - self.drag_start_x
             self.resize_x(amt, cntrl)
             self.drag_start_x = e.x
+
+        self.set_detection_zone_props()
 
     # If we wanted to, the resize_x and resize_y could be refactored into a single method. But it's fine for now.
     def resize_x(self, amt, cntrl):
@@ -247,6 +236,28 @@ class DetectionZoneMonitor:
             right_y_coords[3] = center_coords[3] + self.RESIZE_CNTRL_RAD
             self.canvas.coords(self.resize_controls['right'], *right_y_coords)
 
+    def set_detection_zone_props(self):
+        def compress_prop(prop):
+            compressed_prop = prop
+            if prop < 0:
+                compressed_prop = 0
+            elif prop > 1:
+                compressed_prop = 1
+
+            return compressed_prop
+
+        coords = self.canvas.coords(self.detection_zone)
+        c_width = self.canvas.winfo_width()
+        c_height = self.canvas.winfo_height()
+
+        topleft_x = compress_prop(coords[0] / c_width)
+        topleft_y = compress_prop(coords[1] / c_height)
+        self.detection_zone_props['topleft'] = (topleft_x, topleft_y)
+
+        bottomright_x = compress_prop(coords[2] / c_width)
+        bottomright_y = compress_prop(coords[3] / c_height)
+        self.detection_zone_props['bottomright'] = (bottomright_x, bottomright_y)
+        
     def canvas_boundries(self):
         left = 0
         top = 0
