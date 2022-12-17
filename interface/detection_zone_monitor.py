@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import ttk
+import numpy as np
 
 """
 TODO: Move detection zone around with drag.
@@ -55,6 +56,43 @@ class DetectionZoneMonitor:
             'height': event.height,
         }
 
+    def move_detection_zone(self, e):
+        if self.drag_start_x == -1 or self.drag_start_y == -1:
+            return
+
+        max_move_amt = self.max_move_amt()
+
+        self.drag_current_x = e.x
+        amt_x = self.drag_current_x - self.drag_start_x
+        self.drag_start_x = e.x
+        if amt_x < 0:
+            # move left
+            amt_x = amt_x if amt_x >= max_move_amt[0] else max_move_amt[0]
+        else:
+            amt_x = amt_x if amt_x <= max_move_amt[2] else max_move_amt[2]
+
+
+        self.drag_current_y = e.y
+        amt_y = self.drag_current_y - self.drag_start_y
+        self.drag_start_y = e.y
+        if amt_y < 0:
+            # move up
+            amt_y = amt_y if amt_y >= max_move_amt[1] else max_move_amt[1]
+        else:
+            amt_y = amt_y if amt_y <= max_move_amt[3] else max_move_amt[3]
+        
+        self.canvas.move(self.detection_zone, amt_x, amt_y)
+        self.center_resize_cntrls('x')
+        self.center_resize_cntrls('y')
+        self.set_detection_zone_props()
+
+    def max_move_amt(self) -> np.ndarray:
+        canvas_boundries = self.canvas_boundries()
+        dzone_coords = self.canvas.coords(self.detection_zone)
+
+        return np.subtract(canvas_boundries, dzone_coords)
+
+
     def detection_zone_coordinates(self):
         canvas_w = self.canvas.winfo_width()
         canvas_h = self.canvas.winfo_height()
@@ -96,6 +134,10 @@ class DetectionZoneMonitor:
     def activate(self):
         dzone_coodinates = self.detection_zone_coordinates()
         self.detection_zone = self.canvas.create_rectangle(*dzone_coodinates, fill='gray', outline='black', tags=(self.DETECTION_ZONE_TAG,))
+        self.canvas.tag_bind(self.detection_zone, '<ButtonPress-1>', self.mousedown)
+        self.canvas.tag_bind(self.detection_zone, '<ButtonRelease-1>', self.mousedown)
+        self.canvas.tag_bind(self.detection_zone, '<B1-Motion>', self.move_detection_zone)
+
         self.draw_resize_controls()
         self.listen_for_resize()
 
