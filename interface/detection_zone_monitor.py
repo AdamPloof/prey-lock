@@ -130,8 +130,13 @@ class DetectionZoneMonitor:
 
             self.canvas.tag_bind(cntrl, '<B1-Motion>', resize_handler)
         
-    # TODO: Change most of this to an init dzone func and then call it if it hasn't been activated yet, otherwise show dzone.
     def activate(self):
+        if self.detection_zone is None:
+            self.init_detection_zone()
+        else:
+            self.canvas.itemconfigure(self.DETECTION_ZONE_TAG, state='normal')
+
+    def init_detection_zone(self):
         dzone_coodinates = self.detection_zone_coordinates()
         self.detection_zone = self.canvas.create_rectangle(*dzone_coodinates, fill='gray', outline='black', tags=(self.DETECTION_ZONE_TAG,))
         self.canvas.tag_bind(self.detection_zone, '<ButtonPress-1>', self.mousedown)
@@ -149,12 +154,7 @@ class DetectionZoneMonitor:
         self.canvas_area = self.canvas.winfo_width() * self.canvas.winfo_height()
 
     def deactivate(self):
-        self.canvas.delete(self.detection_zone)
-        self.detection_zone = None
-
-        for k, v in self.resize_controls.items():
-            self.canvas.delete(v)
-            self.resize_controls[k] = None
+        self.canvas.itemconfigure(self.DETECTION_ZONE_TAG, state='hidden')
 
     def mousedown(self, e):
         self.resize_mousedown = True
