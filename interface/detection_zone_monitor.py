@@ -2,10 +2,6 @@ from tkinter import *
 from tkinter import ttk
 import numpy as np
 
-"""
-TODO: Move detection zone around with drag.
-Add tag to all items of detection zone to make moving the whole thing around easier.
-"""
 
 class DetectionZoneMonitor:
     
@@ -118,7 +114,31 @@ class DetectionZoneMonitor:
         }
 
         for k, pos in cntrls.items():
-            self.resize_controls[k] = self.canvas.create_oval(*pos, fill='blue', outline='gray', tags=(self.DETECTION_ZONE_TAG,))
+            tag = 'x_cntrl' if k == 'left' or k == 'right' else 'y_cntrl'
+            self.resize_controls[k] = self.canvas.create_oval(*pos, fill='blue', outline='gray', tags=(self.DETECTION_ZONE_TAG, tag))
+
+        self.canvas.tag_bind('x_cntrl', '<Enter>', self.cursor_resize_x)
+        self.canvas.tag_bind('x_cntrl', '<Leave>', self.cursor_default)
+
+        self.canvas.tag_bind('y_cntrl', '<Enter>', self.cursor_resize_y)
+        self.canvas.tag_bind('y_cntrl', '<Leave>', self.cursor_default)
+
+    # Note that these cursors are native Mac OS X cursors. If this is to be cross platform will need to deal with this.
+    # TODO: Set cursor to grabbing on move and resize while resizing even if cursor leaves the resize cntrl during drag.
+    def cursor_resize_x(self, e):
+        self.canvas.config(cursor='resizeleftright')
+
+    def cursor_resize_y(self, e):
+        self.canvas.config(cursor='resizeupdown')
+
+    def cursor_grab(self, e):
+        self.canvas.config(cursor='openhand')
+
+    def cursor_grabbing(self, e):
+        self.canvas.config(cursor='closedhand')
+
+    def cursor_default(self, e):
+        self.canvas.config(cursor='')
 
     def listen_for_resize(self):
         for cntrl in self.resize_controls.values():
@@ -139,8 +159,10 @@ class DetectionZoneMonitor:
     def init_detection_zone(self):
         dzone_coodinates = self.detection_zone_coordinates()
         self.detection_zone = self.canvas.create_rectangle(*dzone_coodinates, fill='gray', outline='black', tags=(self.DETECTION_ZONE_TAG,))
+        self.canvas.tag_bind(self.detection_zone, '<Enter>', self.cursor_grab)
+        self.canvas.tag_bind(self.detection_zone, '<Leave>', self.cursor_default)
         self.canvas.tag_bind(self.detection_zone, '<ButtonPress-1>', self.mousedown)
-        self.canvas.tag_bind(self.detection_zone, '<ButtonRelease-1>', self.mousedown)
+        self.canvas.tag_bind(self.detection_zone, '<ButtonRelease-1>', self.mouseup)
         self.canvas.tag_bind(self.detection_zone, '<B1-Motion>', self.move_detection_zone)
 
         self.draw_resize_controls()
