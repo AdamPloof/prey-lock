@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import ttk
+from PIL import Image, ImageDraw, ImageTk
 import numpy as np
 
 
@@ -21,6 +22,7 @@ class DetectionZoneMonitor:
 
         # These are actually the IDs of the canvas items.
         self.detection_zone: int = None
+        self.detection_zone_img = None
         self.resize_controls: dict = {
             'top': None,
             'bottom': None,
@@ -34,8 +36,6 @@ class DetectionZoneMonitor:
             'topleft': (0.2, 0.2),
             'bottomright': (.8, .8)
         }
-
-        self.canvas_area = 0
 
     def scale_detection_zone(self, event):
         w_delta = (event.width - self.last_canvas_dim['width'])
@@ -98,6 +98,14 @@ class DetectionZoneMonitor:
         dzone_coordinates = tuple(round(x) for x in top_left) + tuple(round(x) for x in bottom_right)
 
         return dzone_coordinates
+
+    # TODO: Set size and position of the detection_zone_bg = to the detection zone.
+    def draw_detection_zone_bg(self):
+        # placeholders for actual position of dzone
+        img_x = self.canvas.winfo_width() / 2
+        img_y = self.canvas.winfo_height() / 2
+        self.detection_zone_img = ImageTk.PhotoImage(Image.new('RGBA', (450, 400), color=(150, 250, 150, 150)))
+        self.detection_zone_bg = self.canvas.create_image((img_x, img_y), image=self.detection_zone_img)
 
     def draw_resize_controls(self):
         coords = self.canvas.coords(self.detection_zone)
@@ -173,7 +181,8 @@ class DetectionZoneMonitor:
             'width': self.canvas.winfo_width(),
             'height': self.canvas.winfo_height(),
         }
-        self.canvas_area = self.canvas.winfo_width() * self.canvas.winfo_height()
+
+        self.draw_detection_zone_bg()
 
     def deactivate(self):
         self.canvas.itemconfigure(self.DETECTION_ZONE_TAG, state='hidden')
