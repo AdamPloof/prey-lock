@@ -9,6 +9,7 @@ class DetectionZoneMonitor:
     RESIZE_MIN_THRESHOLD = 50 # The smallest the window can be resized to for each axis
     RESIZE_CNTRL_RAD = 10 # The radius of the resize controls
     DETECTION_ZONE_TAG = 'dzone'
+    DZ_COLOR = (150, 250, 150, 150)
     
     def __init__(self, container) -> None:
         self.canvas = Canvas(container, background='#e8e9eb')
@@ -20,9 +21,18 @@ class DetectionZoneMonitor:
         self.drag_current_x: int = -1
         self.drag_current_y: int = -1
 
-        # These are actually the IDs of the canvas items.
+        # detection_zone_coord coordinates normalized to 0.0 to 1.0 scale of current canvas size
+        # rather than absolute pixel values. E.g. center: (.5, .5), height: .75, width: .75 would 
+        # a zone 3/4 the width and height of the canvas positioned in the center of the canvas.
+        self.dz_props = {
+            'center': (0.5, 0.5),
+            'height': .5,
+            'width': .5
+        }
+
+        # These are the IDs of the canvas items.
+        self.dz_img_ref: ImageTk.PhotoImage = None
         self.detection_zone: int = None
-        self.detection_zone_img = None
         self.resize_controls: dict = {
             'top': None,
             'bottom': None,
@@ -30,12 +40,6 @@ class DetectionZoneMonitor:
             'right': None,
         }
 
-        # detection_zone_coord coordinates normalized to 0.0 to 1.0 scale of current canvas size
-        # rather than absolute pixel values. E.g. (.5, .5) would be the center of the canvas.
-        self.detection_zone_props = {
-            'topleft': (0.2, 0.2),
-            'bottomright': (.8, .8)
-        }
 
     def scale_detection_zone(self, event):
         w_delta = (event.width - self.last_canvas_dim['width'])
@@ -80,7 +84,7 @@ class DetectionZoneMonitor:
         self.canvas.move(self.detection_zone, amt_x, amt_y)
         self.center_resize_cntrls('x')
         self.center_resize_cntrls('y')
-        self.set_detection_zone_props()
+        self.set_dz_props()
 
     def max_move_amt(self) -> np.ndarray:
         canvas_boundries = self.canvas_boundries()
@@ -93,26 +97,41 @@ class DetectionZoneMonitor:
         canvas_w = self.canvas.winfo_width()
         canvas_h = self.canvas.winfo_height()
 
-        top_left = (self.detection_zone_props['topleft'][0] * canvas_w, self.detection_zone_props['topleft'][1] * canvas_h)
-        bottom_right = (self.detection_zone_props['bottomright'][0] * canvas_w, self.detection_zone_props['bottomright'][1] * canvas_h)
+        top_left = (self.dz_props['topleft'][0] * canvas_w, self.dz_props['topleft'][1] * canvas_h)
+        bottom_right = (self.dz_props['bottomright'][0] * canvas_w, self.dz_props['bottomright'][1] * canvas_h)
         dzone_coordinates = tuple(round(x) for x in top_left) + tuple(round(x) for x in bottom_right)
 
         return dzone_coordinates
 
-    # TODO: Set size and position of the detection_zone_bg = to the detection zone.
-    def draw_detection_zone_bg(self):
-        # placeholders for actual position of dzone
-        img_x = self.canvas.winfo_width() / 2
-        img_y = self.canvas.winfo_height() / 2
-        self.detection_zone_img = ImageTk.PhotoImage(Image.new('RGBA', (450, 400), color=(150, 250, 150, 150)))
-        self.detection_zone_bg = self.canvas.create_image((img_x, img_y), image=self.detection_zone_img)
-
     def draw_resize_controls(self):
-        coords = self.canvas.coords(self.detection_zone)
-        top = (((coords[0] + coords[2]) / 2) - self.RESIZE_CNTRL_RAD, coords[1] - self.RESIZE_CNTRL_RAD, ((coords[0] + coords[2]) / 2) + self.RESIZE_CNTRL_RAD, coords[1] + self.RESIZE_CNTRL_RAD)
-        bottom = (((coords[0] + coords[2]) / 2) - self.RESIZE_CNTRL_RAD, coords[3] + self.RESIZE_CNTRL_RAD, ((coords[0] + coords[2]) / 2) + self.RESIZE_CNTRL_RAD, coords[3] - self.RESIZE_CNTRL_RAD)
-        left = (coords[0] + self.RESIZE_CNTRL_RAD, ((coords[1] + coords[3]) / 2) + self.RESIZE_CNTRL_RAD, coords[0] - self.RESIZE_CNTRL_RAD, ((coords[1] + coords[3]) / 2) - self.RESIZE_CNTRL_RAD)
-        right = (coords[2] + self.RESIZE_CNTRL_RAD, ((coords[1] + coords[3]) / 2) + self.RESIZE_CNTRL_RAD, coords[2] - self.RESIZE_CNTRL_RAD, ((coords[1] + coords[3]) / 2) - self.RESIZE_CNTRL_RAD)
+        props = self.get_dz_props()
+        top = (
+            props['center'][0] - self.RESIZE_CNTRL_RAD, # x0
+            props['center'][1] - round(.5 * props['height']) - self.RESIZE_CNTRL_RAD, #y0
+            props['center'][0] + self.RESIZE_CNTRL_RAD, #x1
+            props['center'][1] - round(.5 * props['height']) + self.RESIZE_CNTRL_RAD #y1
+        )
+
+        bottom = (
+            props['center'][0] - self.RESIZE_CNTRL_RAD, # x0
+            props['center'][1] + round(.5 * props['height']) - self.RESIZE_CNTRL_RAD, #y0
+            props['center'][0] + self.RESIZE_CNTRL_RAD, #x1
+            props['center'][1] + round(.5 * props['height']) + self.RESIZE_CNTRL_RAD #y1
+        )
+
+        left = (
+            props['center'][0] - round(.5 * props['width']) - self.RESIZE_CNTRL_RAD, # x0
+            props['center'][1] - self.RESIZE_CNTRL_RAD, #y0
+            props['center'][0] - round(.5 * props['width']) + self.RESIZE_CNTRL_RAD, #x1
+            props['center'][1] + self.RESIZE_CNTRL_RAD #y1
+        )
+
+        right = (
+            props['center'][0] + round(.5 * props['width']) - self.RESIZE_CNTRL_RAD, # x0
+            props['center'][1] - self.RESIZE_CNTRL_RAD, #y0
+            props['center'][0] + round(.5 * props['width']) + self.RESIZE_CNTRL_RAD, #x1
+            props['center'][1] + self.RESIZE_CNTRL_RAD #y1
+        )
 
         cntrls = {
             'top': top,
@@ -147,42 +166,12 @@ class DetectionZoneMonitor:
 
     def cursor_default(self, e):
         self.canvas.config(cursor='')
-
-    def listen_for_resize(self):
-        for cntrl in self.resize_controls.values():
-            self.canvas.tag_bind(cntrl, '<ButtonPress-1>', self.mousedown)
-            self.canvas.tag_bind(cntrl, '<ButtonRelease-1>', self.mouseup)
-
-            def resize_handler(event, self=self, cntrl=cntrl):
-                return self.resize_detection_zone(event, cntrl)
-
-            self.canvas.tag_bind(cntrl, '<B1-Motion>', resize_handler)
         
     def activate(self):
         if self.detection_zone is None:
             self.init_detection_zone()
         else:
             self.canvas.itemconfigure(self.DETECTION_ZONE_TAG, state='normal')
-
-    def init_detection_zone(self):
-        dzone_coodinates = self.detection_zone_coordinates()
-        self.detection_zone = self.canvas.create_rectangle(*dzone_coodinates, fill='gray', outline='black', tags=(self.DETECTION_ZONE_TAG,))
-        self.canvas.tag_bind(self.detection_zone, '<Enter>', self.cursor_grab)
-        self.canvas.tag_bind(self.detection_zone, '<Leave>', self.cursor_default)
-        self.canvas.tag_bind(self.detection_zone, '<ButtonPress-1>', self.mousedown)
-        self.canvas.tag_bind(self.detection_zone, '<ButtonRelease-1>', self.mouseup)
-        self.canvas.tag_bind(self.detection_zone, '<B1-Motion>', self.move_detection_zone)
-
-        self.draw_resize_controls()
-        self.listen_for_resize()
-
-        self.canvas.bind('<Configure>', self.scale_detection_zone)
-        self.last_canvas_dim = {
-            'width': self.canvas.winfo_width(),
-            'height': self.canvas.winfo_height(),
-        }
-
-        self.draw_detection_zone_bg()
 
     def deactivate(self):
         self.canvas.itemconfigure(self.DETECTION_ZONE_TAG, state='hidden')
@@ -198,6 +187,16 @@ class DetectionZoneMonitor:
         self.resize_mousedown = False
         self.drag_start_x = -1
         self.drag_start_y = -1
+
+    def listen_for_resize(self):
+        for cntrl in self.resize_controls.values():
+            self.canvas.tag_bind(cntrl, '<ButtonPress-1>', self.mousedown)
+            self.canvas.tag_bind(cntrl, '<ButtonRelease-1>', self.mouseup)
+
+            def resize_handler(event, self=self, cntrl=cntrl):
+                return self.resize_detection_zone(event, cntrl)
+
+            self.canvas.tag_bind(cntrl, '<B1-Motion>', resize_handler)
 
     def resize_detection_zone(self, e, cntrl):
         if self.drag_start_x == -1 or self.drag_start_y == -1:
@@ -216,7 +215,7 @@ class DetectionZoneMonitor:
             self.resize_x(amt, cntrl)
             self.drag_start_x = e.x
 
-        self.set_detection_zone_props()
+        self.set_dz_props()
 
     # If we wanted to, the resize_x and resize_y could be refactored into a single method. But it's fine for now.
     def resize_x(self, amt, cntrl):
@@ -309,7 +308,45 @@ class DetectionZoneMonitor:
             right_y_coords[3] = center_coords[3] + self.RESIZE_CNTRL_RAD
             self.canvas.coords(self.resize_controls['right'], *right_y_coords)
 
-    def set_detection_zone_props(self):
+    def init_detection_zone(self):
+        props = self.get_dz_props()
+        self.dz_img_ref = ImageTk.PhotoImage(Image.new('RGBA',
+            (props['width'], props['height']),
+            color=self.DZ_COLOR
+        ))
+
+        self.detection_zone = self.canvas.create_image(props['center'], image=self.dz_img_ref)
+        self.canvas.tag_bind(self.detection_zone, '<Enter>', self.cursor_grab)
+        self.canvas.tag_bind(self.detection_zone, '<Leave>', self.cursor_default)
+        self.canvas.tag_bind(self.detection_zone, '<ButtonPress-1>', self.mousedown)
+        self.canvas.tag_bind(self.detection_zone, '<ButtonRelease-1>', self.mouseup)
+        self.canvas.tag_bind(self.detection_zone, '<B1-Motion>', self.move_detection_zone)
+
+        self.draw_resize_controls()
+        self.listen_for_resize()
+
+        self.canvas.bind('<Configure>', self.scale_detection_zone)
+        self.last_canvas_dim = {
+            'width': self.canvas.winfo_width(),
+            'height': self.canvas.winfo_height(),
+        }
+
+    def get_dz_props(self):
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        center_x = round(self.dz_props['center'][0] * canvas_width)
+        center_y = round(self.dz_props['center'][1] * canvas_height)
+        width = round(self.dz_props['width'] * canvas_width)
+        height = round(self.dz_props['height'] * canvas_height)
+
+        return {
+            'center': (center_x, center_y),
+            'width': width,
+            'height': height
+        }
+
+    def set_dz_props(self):
         def compress_prop(prop):
             compressed_prop = prop
             if prop < 0:
@@ -325,11 +362,11 @@ class DetectionZoneMonitor:
 
         topleft_x = compress_prop(coords[0] / c_width)
         topleft_y = compress_prop(coords[1] / c_height)
-        self.detection_zone_props['topleft'] = (topleft_x, topleft_y)
+        self.dz_props['topleft'] = (topleft_x, topleft_y)
 
         bottomright_x = compress_prop(coords[2] / c_width)
         bottomright_y = compress_prop(coords[3] / c_height)
-        self.detection_zone_props['bottomright'] = (bottomright_x, bottomright_y)
+        self.dz_props['bottomright'] = (bottomright_x, bottomright_y)
         
     def canvas_boundries(self):
         left = 0
