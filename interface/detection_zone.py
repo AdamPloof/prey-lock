@@ -1,5 +1,6 @@
 from tkinter import *
 from PIL import Image, ImageDraw, ImageTk
+from typing import Callable
 import numpy as np
 
 
@@ -9,11 +10,20 @@ class DetectionZone:
     COLOR = (150, 250, 150, 150)
     TAG = 'dzone'
 
-    def __init__(self, width: int, height: int, topleft: tuple, canvas: Canvas) -> None:
-        self.width = width
-        self.height = height
-        self.topleft = topleft
+    def __init__(self, canvas: Canvas, rel_topleft: tuple, rel_width: float, rel_height: float) -> None:
         self.canvas = canvas
+        self.rel_topleft = rel_topleft
+        self.rel_width = rel_width
+        self.rel_height = rel_height
+
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        x = round(self.rel_topleft[0] * canvas_width)
+        y = round(self.rel_topleft[1] * canvas_height)
+
+        self.topleft = (x, y)
+        self.width = round(self.rel_width * canvas_width)
+        self.height = round(self.rel_height * canvas_height)
 
         self.ready = False
         self.detection_zone: int = None
@@ -21,6 +31,17 @@ class DetectionZone:
         self.photo_img: ImageTk.PhotoImage = None
 
         self.draw()
+
+    def update_props(func: Callable):
+        def wrapper(*args):
+            func(*args)
+            self: DetectionZone = args[0]
+            props = self.get_relative_props()
+            self.rel_topleft = props['topleft']
+            self.rel_width = props['width']
+            self.rel_height = props['height']
+        
+        return wrapper
 
     def get_id(self):
         return self.detection_zone
@@ -47,16 +68,19 @@ class DetectionZone:
 
     # Redraw the detection zone image. Most useful when the canvas is resized.
     def update(self):
-        props = self.relative_props()
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
-        self.width = round(props['width'] * canvas_width)
-        self.height = round(props['height'] * canvas_height)
-        self.topleft = (round(props['topleft'][0] * canvas_width), round(props['topleft'][1] * canvas_height))
+        x = round(self.rel_topleft[0] * canvas_width)
+        y = round(self.rel_topleft[1] * canvas_height)
+
+        self.topleft = (x, y)
+        self.width = round(self.rel_width * canvas_width)
+        self.height = round(self.rel_height * canvas_height)
         self.draw()
 
+    @update_props
     def resize(self, side, amt):
-        props = self.absolute_props()
+        props = self.get_absolute_props()
         if side == 'left':
             resize_amt = amt
             resize_amt *= -1
@@ -82,7 +106,7 @@ class DetectionZone:
         self.topleft = topleft
         self.draw()
 
-    # TODO: restrict moving to within canvas boundries
+    @update_props
     def move(self, amt_x, amt_y):
         move_x = self.restrict_move_amt(amt_x, 'x')
         move_y = self.restrict_move_amt(amt_y, 'y')
@@ -109,7 +133,7 @@ class DetectionZone:
         return sides
 
     #  Return the properties of detection zone relative to the canvas size.
-    def relative_props(self) -> dict:
+    def get_relative_props(self) -> dict:
         def compress_prop(prop):
             compressed_prop = prop
             if prop < 0:
@@ -147,7 +171,7 @@ class DetectionZone:
 
         return props
 
-    def absolute_props(self) -> dict:
+    def get_absolute_props(self) -> dict:
         sides = self.sides()
         props = {
             'center': self.center(),

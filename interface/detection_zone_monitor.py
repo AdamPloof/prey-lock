@@ -223,21 +223,7 @@ class DetectionZoneMonitor:
         self.canvas.tag_bind(self.detection_zone.get_id(), '<B1-Motion>', self.move_detection_zone)
 
     def load_detection_zone(self):
-        canvas_width = self.canvas.winfo_width()
-        canvas_height = self.canvas.winfo_height()
-
-        x = round(self.dz_props['topleft'][0] * canvas_width)
-        y = round(self.dz_props['topleft'][1] * canvas_height)
-        width = round(self.dz_props['width'] * canvas_width)
-        height = round(self.dz_props['height'] * canvas_height)
-
-        props = {
-            'topleft': (x, y),
-            'width': width,
-            'height': height
-        }
-
-        self.detection_zone = DetectionZone(props['width'], props['height'], props['topleft'], self.canvas)
+        self.detection_zone = DetectionZone(self.canvas, self.dz_props['topleft'], self.dz_props['width'], self.dz_props['height'])
         self.detection_zone.draw()
         self.canvas.bind('<Configure>', self.scale_detection_zone)
         self.bind_detection_zone_events()
