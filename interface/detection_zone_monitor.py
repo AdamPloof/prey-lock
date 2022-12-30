@@ -240,3 +240,4 @@ class DetectionZoneMonitor:
         self.detection_zone = DetectionZone(props['width'], props['height'], props['topleft'], self.canvas)
         self.detection_zone.draw()
         self.canvas.bind('<Configure>', self.scale_detection_zone)
+        self.bind_detection_zone_events()

@@ -84,7 +84,9 @@ class DetectionZone:
 
     # TODO: restrict moving to within canvas boundries
     def move(self, amt_x, amt_y):
-        self.canvas.move(self.detection_zone, amt_x, amt_y)
+        move_x = self.restrict_move_amt(amt_x, 'x')
+        move_y = self.restrict_move_amt(amt_y, 'y')
+        self.canvas.move(self.detection_zone, move_x, move_y)
 
     def center(self) -> tuple:
         topleft = self.canvas.coords(self.detection_zone)
@@ -157,18 +159,47 @@ class DetectionZone:
 
         return props
 
+    def restrict_move_amt(self, amt, axis):
+        if axis == 'x':
+            side = 'left' if amt < 0 else 'right'
+        else:
+            side = 'top' if amt < 0 else 'bottom'
+
+        sides = self.sides()
+        boundries = self.canvas_boundries()
+        boundry_sides = {
+            'left': 0,
+            'top': 1,
+            'right': 2,
+            'bottom': 3
+        }
+
+        if side == 'left' or side == 'top':
+            if sides[side] + amt < boundries[boundry_sides[side]]:
+                move_amt = (0 - sides[side])
+            else:
+                move_amt = amt
+        else:
+            if sides[side] + amt > boundries[boundry_sides[side]]:
+                move_amt = boundries[boundry_sides[side]] - sides[side]
+            else:
+                move_amt = amt
+
+        return move_amt
+
+
     def restrict_resize_amt(self, amt, side):
         sides = self.sides()
         boundries = self.canvas_boundries()
 
         if side == 'left':
-            resize_amt = amt if (sides['left'] - amt) >= boundries[0] else self.max_move_amt('left')
+            resize_amt = amt if (sides['left'] - amt) >= boundries[0] else self.max_resize_amt('left')
         elif side == 'top':
-            resize_amt = amt if (sides['top'] - amt) >= boundries[1] else self.max_move_amt('top')
+            resize_amt = amt if (sides['top'] - amt) >= boundries[1] else self.max_resize_amt('top')
         elif side == 'right':
-            resize_amt = amt if (sides['right'] + amt) <= boundries[2] else self.max_move_amt('right')
+            resize_amt = amt if (sides['right'] + amt) <= boundries[2] else self.max_resize_amt('right')
         elif side == 'bottom':
-            resize_amt = amt if (sides['bottom'] + amt) <= boundries[3] else self.max_move_amt('bottom')
+            resize_amt = amt if (sides['bottom'] + amt) <= boundries[3] else self.max_resize_amt('bottom')
 
         if side == 'left' or side == 'right':
             if self.width + resize_amt < self.MIN_WIDTH:
@@ -180,7 +211,7 @@ class DetectionZone:
         return resize_amt
         
 
-    def max_move_amt(self, side):
+    def max_resize_amt(self, side):
         sides = self.sides()        
         boundries = self.canvas_boundries()
         boundry_sides = {
@@ -190,14 +221,14 @@ class DetectionZone:
             'bottom': 3
         }
 
-        max_move = boundries[boundry_sides[side]] - sides[side]
+        max_resize = boundries[boundry_sides[side]] - sides[side]
 
         if side == 'top' or side == 'left':
-            max_move = max_move * -1 if max_move < 0 else 0
+            max_resize = max_resize * -1 if max_resize < 0 else 0
         else:
-            max_move = max_move if max_move > 0 else 0
+            max_resize = max_resize if max_resize > 0 else 0
 
-        return max_move
+        return max_resize
 
     def canvas_boundries(self) -> tuple:
         left = 0
