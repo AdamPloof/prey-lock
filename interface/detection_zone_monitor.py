@@ -90,7 +90,7 @@ class DetectionZoneMonitor:
         self.canvas.coords(self.resize_controls['right'], *cntrls['right'])
 
         for cntrl in self.resize_controls.values():
-            self.canvas.tag_raise(cntrl, self.detection_zone.detection_zone)
+            self.canvas.tag_raise(cntrl, self.detection_zone.get_id())
 
     def resize_cntrl_coords(self) -> dict:
         center = self.detection_zone.center()

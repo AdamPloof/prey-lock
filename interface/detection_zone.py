@@ -47,7 +47,7 @@ class DetectionZone:
         return self.detection_zone
 
     # Worth pointing out that once we assign new images to our img_ref properties the garbage collector will remove
-    # the previous ones. The only thing we need to manually clean up is the previous detection zone canvas object.
+    # the previous ones. The only thing we need to manually clean up is the previous detection zone canvas item.
     def draw(self):
         self.img = Image.new('RGBA', (self.width, self.height), color=self.COLOR)
         self.photo_img = ImageTk.PhotoImage(self.img)
@@ -67,6 +67,7 @@ class DetectionZone:
         self.canvas.itemconfigure(self.TAG, state='hidden')
 
     # Redraw the detection zone image. Most useful when the canvas is resized.
+    # TODO: this is pretty laggy. Could look into optimizing this.
     def update(self):
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
