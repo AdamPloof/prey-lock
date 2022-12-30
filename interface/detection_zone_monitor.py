@@ -46,8 +46,7 @@ class DetectionZoneMonitor:
         w_delta = (event.width - self.last_canvas_dim['width'])
         h_delta = (event.height - self.last_canvas_dim['height'])
         if w_delta != 0 or h_delta != 0:
-            self.center_resize_cntrls('x')
-            self.center_resize_cntrls('y')
+            self.center_resize_cntrls()
 
         self.last_canvas_dim = {
             'width': event.width,
@@ -68,8 +67,7 @@ class DetectionZoneMonitor:
         
         self.detection_zone.move(amt_x, amt_y)
         self.bind_detection_zone_events()
-        self.center_resize_cntrls('x')
-        self.center_resize_cntrls('y')
+        self.center_resize_cntrls()
 
     def draw_resize_controls(self):
         cntrls = self.resize_cntrl_coords()
@@ -84,16 +82,15 @@ class DetectionZoneMonitor:
         self.canvas.tag_bind('y_cntrl', '<Leave>', self.cursor_default)
         self.listen_for_resize()
 
-    def center_resize_cntrls(self, axis: str):
+    def center_resize_cntrls(self):
         cntrls = self.resize_cntrl_coords()
-        if axis == 'x':
-            # Recenter x controls
-            self.canvas.coords(self.resize_controls['top'], *cntrls['top'])
-            self.canvas.coords(self.resize_controls['bottom'], *cntrls['bottom'])
-        else:
-            # Recenter y controls
-            self.canvas.coords(self.resize_controls['left'], *cntrls['left'])
-            self.canvas.coords(self.resize_controls['right'], *cntrls['right'])
+        self.canvas.coords(self.resize_controls['top'], *cntrls['top'])
+        self.canvas.coords(self.resize_controls['bottom'], *cntrls['bottom'])
+        self.canvas.coords(self.resize_controls['left'], *cntrls['left'])
+        self.canvas.coords(self.resize_controls['right'], *cntrls['right'])
+
+        for cntrl in self.resize_controls.values():
+            self.canvas.tag_raise(cntrl, self.detection_zone.detection_zone)
 
     def resize_cntrl_coords(self) -> dict:
         center = self.detection_zone.center()
@@ -204,19 +201,19 @@ class DetectionZoneMonitor:
             amt = self.drag_current_x - self.drag_start_x
             self.resize_x(amt, cntrl)
             self.drag_start_x = e.x
+        
+        self.center_resize_cntrls()
 
     # If we wanted to, the resize_x and resize_y could be refactored into a single method. But it's fine for now.
     def resize_x(self, amt, cntrl):
         direction = 'left' if self.resize_controls['left'] == cntrl else 'right'
         self.detection_zone.resize(direction, amt)
         self.bind_detection_zone_events()
-        self.center_resize_cntrls('x')
 
     def resize_y(self, amt, cntrl):
         direction = 'top' if self.resize_controls['top'] == cntrl else 'bottom'
         self.detection_zone.resize(direction, amt)
         self.bind_detection_zone_events()
-        self.center_resize_cntrls('y')
 
     def bind_detection_zone_events(self):
         self.canvas.tag_bind(self.detection_zone.get_id(), '<Enter>', self.cursor_grab)

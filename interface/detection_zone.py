@@ -4,6 +4,8 @@ import numpy as np
 
 
 class DetectionZone:
+    MIN_WIDTH = 50
+    MIN_HEIGHT = 50
     COLOR = (150, 250, 150, 150)
     TAG = 'dzone'
 
@@ -15,7 +17,7 @@ class DetectionZone:
 
         self.ready = False
         self.detection_zone: int = None
-        self.img: Image = None
+        self.img: Image.Image = None
         self.photo_img: ImageTk.PhotoImage = None
 
         self.draw()
@@ -54,45 +56,55 @@ class DetectionZone:
         self.draw()
 
     def resize(self, side, amt):
-        sides = self.sides()
         props = self.absolute_props()
-        boundries = self.canvas_boundries()
-        if side == 'top':
-            resize_amt = amt if sides['top'] - amt >= boundries[1] else boundries[1]
-            topleft = (props['topleft'][0], props['topleft'][1] - resize_amt)
-        elif side == 'bottom':
-            resize_amt = amt if sides['bottom'] + amt <= boundries[3] else boundries[3]
-            topleft = props['topleft']
-        elif side == 'left':
-            resize_amt = amt if sides['left'] - amt >= boundries[0] else boundries[0]
+        if side == 'left':
+            resize_amt = amt
+            resize_amt *= -1
+            resize_amt = self.restrict_resize_amt(resize_amt, side)
             topleft = (props['topleft'][0] - resize_amt, props['topleft'][1])
-        elif side == 'right':
-            resize_amt = amt if sides['right'] + amt <= boundries[2] else boundries[2]
+        elif side == 'top':
+            resize_amt = amt
+            resize_amt *= -1
+            resize_amt = self.restrict_resize_amt(resize_amt, side)
+            topleft = (props['topleft'][0], props['topleft'][1] - resize_amt)
+        elif side == 'right' or side == 'bottom':
+            resize_amt = amt
+            resize_amt = self.restrict_resize_amt(resize_amt, side)
             topleft = props['topleft']
         else:
             raise Exception(f'Invalid side for resizing. Side: {side}')
 
-        self.width += resize_amt
-        self.topleft = topleft
-        self.update()
+        if side == 'top' or side == 'bottom':
+            self.height += resize_amt
+        else:
+            self.width += resize_amt
 
+        self.topleft = topleft
+        self.draw()
+
+    # TODO: restrict moving to within canvas boundries
     def move(self, amt_x, amt_y):
         self.canvas.move(self.detection_zone, amt_x, amt_y)
 
     def center(self) -> tuple:
+        topleft = self.canvas.coords(self.detection_zone)
         return (
-            round(self.img.width / 2),
-            round(self.img.height / 2),
+            topleft[0] + round(self.img.width / 2),
+            topleft[1] + round(self.img.height / 2),
         )
 
     def sides(self) -> dict:
         topleft = self.canvas.coords(self.detection_zone)
-        return {
+        sides = {
             'top': topleft[1],
             'bottom': topleft[1] + self.img.height,
             'left': topleft[0],
             'right': topleft[0] + self.img.width
         }
+        for k, v in sides.items():
+            sides[k] = int(v)
+        
+        return sides
 
     #  Return the properties of detection zone relative to the canvas size.
     def relative_props(self) -> dict:
@@ -116,9 +128,9 @@ class DetectionZone:
         )
         rel_sides = {
             'top': compress_prop(abs_sides['top'] / canvas_height),
-            'bottom': compress_prop(abs_center['bottom'] / canvas_height),
-            'left': compress_prop(abs_center['left'] / canvas_width),
-            'right': compress_prop(abs_center['right'] / canvas_width),
+            'bottom': compress_prop(abs_sides['bottom'] / canvas_height),
+            'left': compress_prop(abs_sides['left'] / canvas_width),
+            'right': compress_prop(abs_sides['right'] / canvas_width),
         }
         rel_width = compress_prop(self.img.width / canvas_width)
         rel_height = compress_prop(self.img.height / canvas_height)
@@ -144,6 +156,48 @@ class DetectionZone:
         }
 
         return props
+
+    def restrict_resize_amt(self, amt, side):
+        sides = self.sides()
+        boundries = self.canvas_boundries()
+
+        if side == 'left':
+            resize_amt = amt if (sides['left'] - amt) >= boundries[0] else self.max_move_amt('left')
+        elif side == 'top':
+            resize_amt = amt if (sides['top'] - amt) >= boundries[1] else self.max_move_amt('top')
+        elif side == 'right':
+            resize_amt = amt if (sides['right'] + amt) <= boundries[2] else self.max_move_amt('right')
+        elif side == 'bottom':
+            resize_amt = amt if (sides['bottom'] + amt) <= boundries[3] else self.max_move_amt('bottom')
+
+        if side == 'left' or side == 'right':
+            if self.width + resize_amt < self.MIN_WIDTH:
+                resize_amt = (self.width - self.MIN_WIDTH) * -1
+        else:
+            if self.height + resize_amt < self.MIN_HEIGHT:
+                resize_amt = (self.height - self.MIN_HEIGHT) * -1
+
+        return resize_amt
+        
+
+    def max_move_amt(self, side):
+        sides = self.sides()        
+        boundries = self.canvas_boundries()
+        boundry_sides = {
+            'left': 0,
+            'top': 1,
+            'right': 2,
+            'bottom': 3
+        }
+
+        max_move = boundries[boundry_sides[side]] - sides[side]
+
+        if side == 'top' or side == 'left':
+            max_move = max_move * -1 if max_move < 0 else 0
+        else:
+            max_move = max_move if max_move > 0 else 0
+
+        return max_move
 
     def canvas_boundries(self) -> tuple:
         left = 0
