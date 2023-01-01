@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import ttk
 
 from detection_zone_monitor import DetectionZoneMonitor
+from camera_feed import Camera
 
 class PreyLockUI:
     DEFAULT_WINDOW_SIZE = "800x600"
@@ -46,6 +47,9 @@ class PreyLockUI:
         self.sensitivity.grid(column=0, row=8, sticky=(W, E), padx=40)
         self.sensitivity.set(20)
 
+    def stream_camera(self):
+        self.detection_zone.refresh_monitor()
+        self.root.after(Camera.FPS_MS, self.stream_camera)
 
     def toggle_detection_zone_edit(self):
         if not self.edit_zone_edit_active:
@@ -61,6 +65,7 @@ class PreyLockUI:
 
 def main():
     ui = PreyLockUI()
+    ui.stream_camera()
     ui.run()
 
 

@@ -4,6 +4,7 @@ from PIL import Image, ImageDraw, ImageTk
 import numpy as np
 import cv2
 import threading
+from queue import Queue
 import time
 import json
 
@@ -55,31 +56,39 @@ class DetectionZoneMonitor:
         self.frame_img = None
         self.frame_photo_img = None
 
-        self.cam_thread = threading.Thread(target=self.stream_camera, args=())
+        self.frame_queue = Queue(maxsize=10)
+        self.cam_thread = threading.Thread(target=self.fetch_camera_frame, args=())
         self.cam_thread.daemon = True
         self.cam_thread.start()
 
-    def stream_camera(self):
+    def fetch_camera_frame(self):
         # Warm up the camera stream
         if not self.cam.frame_ready:
             time.sleep(1)
-            self.stream_camera()
+            self.fetch_camera_frame()
             return
-
+    
         while True:
-            self.frame = self.cam.get_frame()
-            self.frame_img = Image.fromarray(cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB))
-            self.frame_img = self.frame_img.resize((self.canvas.winfo_width(), self.canvas.winfo_height()))
-            self.frame_photo_img = ImageTk.PhotoImage(self.frame_img)
-            stream = self.canvas.create_image((0, 0), image=self.frame_photo_img, anchor='nw')
+            self.frame_queue.put(self.cam.get_frame())
 
-            if self.detection_zone is not None and self.detection_zone.get_id() is not None:
-                self.canvas.tag_lower(stream, self.detection_zone.get_id())
+    def refresh_monitor(self):
+        if self.frame_queue.empty():
+            return
+        else:
+            self.frame = self.frame_queue.get()
 
-            if self.stream is not None:
-                self.canvas.delete(self.stream)
+        self.frame_img = Image.fromarray(cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB))
+        self.frame_img = self.frame_img.resize((self.canvas.winfo_width(), self.canvas.winfo_height()))
+        self.frame_photo_img = ImageTk.PhotoImage(self.frame_img)
+        stream = self.canvas.create_image((0, 0), image=self.frame_photo_img, anchor='nw')
 
-            self.stream = stream
+        if self.detection_zone is not None and self.detection_zone.get_id() is not None:
+            self.canvas.tag_lower(stream, self.detection_zone.get_id())
+
+        if self.stream is not None:
+            self.canvas.delete(self.stream)
+
+        self.stream = stream
 
     def scale_detection_zone(self, event):
         self.detection_zone.update()
