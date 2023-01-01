@@ -1,9 +1,14 @@
 from tkinter import *
 from tkinter import ttk
 from PIL import Image, ImageDraw, ImageTk
-from detection_zone import DetectionZone
 import numpy as np
+import cv2
+import threading
+import time
+import json
 
+from detection_zone import DetectionZone
+from camera_feed import Camera
 
 class DetectionZoneMonitor:
     
@@ -23,8 +28,8 @@ class DetectionZoneMonitor:
         self.drag_current_y: int = -1
 
         # detection_zone_coord coordinates normalized to 0.0 to 1.0 scale of current canvas size
-        # rather than absolute pixel values. E.g. center: (.5, .5), height: .75, width: .75 would 
-        # a zone 3/4 the width and height of the canvas positioned in the center of the canvas.
+        # rather than absolute pixel values. E.g. topleft: (0, .5), height: .5, width: .5 would 
+        # a zone 1/2 the width and height of the canvas positioned on the left edge, halfway down the canvas.
         self.dz_props = {
             'topleft': (0.2, 0.2),
             'height': .5,
@@ -38,6 +43,43 @@ class DetectionZoneMonitor:
             'left': None,
             'right': None,
         }
+
+        with open('../env.json') as env_file:
+            env = json.load(env_file)
+
+        RTSP = f"rtsp://{env['USER']}:{env['PASS']}@{env['RTSP_URL']}"
+
+        self.cam = Camera(RTSP)
+        self.stream: int = None
+        self.frame = None
+        self.frame_img = None
+        self.frame_photo_img = None
+
+        self.cam_thread = threading.Thread(target=self.stream_camera, args=())
+        self.cam_thread.daemon = True
+        self.cam_thread.start()
+
+    def stream_camera(self):
+        # Warm up the camera stream
+        if not self.cam.frame_ready:
+            time.sleep(1)
+            self.stream_camera()
+            return
+
+        while True:
+            self.frame = self.cam.get_frame()
+            self.frame_img = Image.fromarray(cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB))
+            self.frame_img = self.frame_img.resize((self.canvas.winfo_width(), self.canvas.winfo_height()))
+            self.frame_photo_img = ImageTk.PhotoImage(self.frame_img)
+            stream = self.canvas.create_image((0, 0), image=self.frame_photo_img, anchor='nw')
+
+            if self.detection_zone is not None and self.detection_zone.get_id() is not None:
+                self.canvas.tag_lower(stream, self.detection_zone.get_id())
+
+            if self.stream is not None:
+                self.canvas.delete(self.stream)
+
+            self.stream = stream
 
     def scale_detection_zone(self, event):
         self.detection_zone.update()

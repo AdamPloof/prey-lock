@@ -5,6 +5,7 @@ from detection_zone_monitor import DetectionZoneMonitor
 
 class PreyLockUI:
     DEFAULT_WINDOW_SIZE = "800x600"
+    ASPECT_RATIO = (16, 9, 16, 9)
 
     def __init__(self) -> None:
         self.edit_zone_edit_active = False
@@ -15,6 +16,7 @@ class PreyLockUI:
 
     def init_tk(self):
         root = Tk()
+        root.aspect(*self.ASPECT_RATIO)
         root.title('Cat Dector')
         root.geometry(self.DEFAULT_WINDOW_SIZE)
         root.columnconfigure(0, weight=1)
