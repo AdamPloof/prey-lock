@@ -2,3 +2,5 @@ training_images/
 captured_images/
 env.json
 classifier_test.py
+__pycache__/
+.vscode/
