@@ -62,7 +62,10 @@ class DetectionZone:
         if not self.ready:
             self.ready = True
 
-    def show(self):
+    # returns True if requires redraw, false if no redraw required.
+    # Feels a little hacky to return a status like this but it's a simple solution to the problem
+    # of knowing when to rebind events in the DetectionZoneMonitor.
+    def show(self) -> bool:
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
         current_canvas_dim = (canvas_width, canvas_height)
@@ -70,10 +73,15 @@ class DetectionZone:
         # Check if canvas was resized since the detection zone was hidden
         if (current_canvas_dim != self.last_canvas_dim):
             self.draw()
+            redraw_required = True
+        else:
+            redraw_required = False
 
         self.canvas.itemconfigure(self.TAG, state='normal')
         self.last_canvas_dim = current_canvas_dim
         self.is_hidden = False
+
+        return redraw_required
 
     def hide(self):
         self.canvas.itemconfigure(self.TAG, state='hidden')

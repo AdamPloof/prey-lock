@@ -137,8 +137,9 @@ class DetectionZoneMonitor:
         self.canvas.coords(self.resize_controls['left'], *cntrls['left'])
         self.canvas.coords(self.resize_controls['right'], *cntrls['right'])
 
+        detection_zone_id = self.detection_zone.get_id()
         for cntrl in self.resize_controls.values():
-            self.canvas.tag_raise(cntrl, self.detection_zone.get_id())
+            self.canvas.tag_raise(cntrl, detection_zone_id)
 
     def resize_cntrl_coords(self) -> dict:
         center = self.detection_zone.center()
@@ -201,7 +202,11 @@ class DetectionZoneMonitor:
             self.draw_resize_controls()
             self.last_canvas_dim = (self.canvas.winfo_width(), self.canvas.winfo_height())
         else:
-            self.detection_zone.show()
+            redraw_required = self.detection_zone.show()
+            if redraw_required:
+                self.bind_detection_zone_events()
+    
+            self.center_resize_cntrls()
             self.canvas.itemconfigure(self.CNTRL_TAG, state='normal')
 
     def deactivate(self):
@@ -261,11 +266,12 @@ class DetectionZoneMonitor:
         self.bind_detection_zone_events()
 
     def bind_detection_zone_events(self):
-        self.canvas.tag_bind(self.detection_zone.get_id(), '<Enter>', self.cursor_grab)
-        self.canvas.tag_bind(self.detection_zone.get_id(), '<Leave>', self.cursor_default)
-        self.canvas.tag_bind(self.detection_zone.get_id(), '<ButtonPress-1>', self.mousedown)
-        self.canvas.tag_bind(self.detection_zone.get_id(), '<ButtonRelease-1>', self.mouseup)
-        self.canvas.tag_bind(self.detection_zone.get_id(), '<B1-Motion>', self.move_detection_zone)
+        detection_zone_id = self.detection_zone.get_id()
+        self.canvas.tag_bind(detection_zone_id, '<Enter>', self.cursor_grab)
+        self.canvas.tag_bind(detection_zone_id, '<Leave>', self.cursor_default)
+        self.canvas.tag_bind(detection_zone_id, '<ButtonPress-1>', self.mousedown)
+        self.canvas.tag_bind(detection_zone_id, '<ButtonRelease-1>', self.mouseup)
+        self.canvas.tag_bind(detection_zone_id, '<B1-Motion>', self.move_detection_zone)
 
     def load_detection_zone(self):
         self.detection_zone = DetectionZone(self.canvas, self.dz_props['topleft'], self.dz_props['width'], self.dz_props['height'])
