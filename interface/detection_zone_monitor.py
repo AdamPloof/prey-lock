@@ -56,10 +56,10 @@ class DetectionZoneMonitor:
         self.frame_img = None
         self.frame_photo_img = None
 
-        self.frame_queue = Queue(maxsize=10)
-        self.cam_thread = threading.Thread(target=self.fetch_camera_frame, args=())
-        self.cam_thread.daemon = True
-        self.cam_thread.start()
+        # self.frame_queue = Queue(maxsize=10)
+        # self.cam_thread = threading.Thread(target=self.fetch_camera_frame, args=())
+        # self.cam_thread.daemon = True
+        # self.cam_thread.start()
 
     def fetch_camera_frame(self):
         # Warm up the camera stream
@@ -94,15 +94,12 @@ class DetectionZoneMonitor:
         self.detection_zone.update()
         self.bind_detection_zone_events()
 
-        w_delta = (event.width - self.last_canvas_dim['width'])
-        h_delta = (event.height - self.last_canvas_dim['height'])
+        w_delta = (event.width - self.last_canvas_dim[0])
+        h_delta = (event.height - self.last_canvas_dim[0])
         if w_delta != 0 or h_delta != 0:
             self.center_resize_cntrls()
 
-        self.last_canvas_dim = {
-            'width': event.width,
-            'height': event.height,
-        }
+        self.last_canvas_dim = (event.width, event.height)
 
     def move_detection_zone(self, e):
         if self.drag_start_x == -1 or self.drag_start_y == -1:
@@ -202,10 +199,7 @@ class DetectionZoneMonitor:
         if not self.detection_zone or not self.detection_zone.ready:
             self.load_detection_zone()
             self.draw_resize_controls()
-            self.last_canvas_dim = {
-                'width': self.canvas.winfo_width(),
-                'height': self.canvas.winfo_height(),
-            }
+            self.last_canvas_dim = (self.canvas.winfo_width(), self.canvas.winfo_height())
         else:
             self.detection_zone.show()
             self.canvas.itemconfigure(self.CNTRL_TAG, state='normal')

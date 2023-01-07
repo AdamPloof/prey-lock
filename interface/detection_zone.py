@@ -18,6 +18,7 @@ class DetectionZone:
 
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
+        self.last_canvas_dim = (canvas_width, canvas_height)
         x = round(self.rel_topleft[0] * canvas_width)
         y = round(self.rel_topleft[1] * canvas_height)
 
@@ -26,6 +27,7 @@ class DetectionZone:
         self.height = round(self.rel_height * canvas_height)
 
         self.ready = False
+        self.is_hidden = False
         self.detection_zone: int = None
         self.img: Image.Image = None
         self.photo_img: ImageTk.PhotoImage = None
@@ -61,10 +63,24 @@ class DetectionZone:
             self.ready = True
 
     def show(self):
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        current_canvas_dim = (canvas_width, canvas_height)
+
+        # Check if canvas was resized since the detection zone was hidden
+        if (current_canvas_dim != self.last_canvas_dim):
+            self.draw()
+
         self.canvas.itemconfigure(self.TAG, state='normal')
+        self.last_canvas_dim = current_canvas_dim
+        self.is_hidden = False
 
     def hide(self):
         self.canvas.itemconfigure(self.TAG, state='hidden')
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        self.last_canvas_dim = (canvas_width, canvas_height)
+        self.is_hidden = True
 
     # Redraw the detection zone image. Most useful when the canvas is resized.
     # TODO: this is pretty laggy. Could look into optimizing this.
@@ -77,7 +93,9 @@ class DetectionZone:
         self.topleft = (x, y)
         self.width = round(self.rel_width * canvas_width)
         self.height = round(self.rel_height * canvas_height)
-        self.draw()
+
+        if not self.is_hidden:
+            self.draw()
 
     @update_props
     def resize(self, side, amt):
