@@ -56,10 +56,10 @@ class DetectionZoneMonitor:
         self.frame_img = None
         self.frame_photo_img = None
 
-        # self.frame_queue = Queue(maxsize=10)
-        # self.cam_thread = threading.Thread(target=self.fetch_camera_frame, args=())
-        # self.cam_thread.daemon = True
-        # self.cam_thread.start()
+        self.frame_queue = Queue(maxsize=10)
+        self.cam_thread = threading.Thread(target=self.fetch_camera_frame, args=())
+        self.cam_thread.daemon = True
+        self.cam_thread.start()
 
     def fetch_camera_frame(self):
         # Warm up the camera stream

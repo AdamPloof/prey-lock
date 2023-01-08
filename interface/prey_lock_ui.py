@@ -1,6 +1,5 @@
 from tkinter import *
 from tkinter import ttk
-# import debugpy
 
 from detection_zone_monitor import DetectionZoneMonitor
 from camera_feed import Camera
@@ -65,14 +64,8 @@ class PreyLockUI:
 
 
 def main():
-    # debugpy.listen(5678)
-    # print("Waiting for debugger attach")
-    # debugpy.wait_for_client()
-    # debugpy.breakpoint()
-    # print('break on this line')
-
     ui = PreyLockUI()
-    # ui.stream_camera()
+    ui.stream_camera()
     ui.run()
 
 
