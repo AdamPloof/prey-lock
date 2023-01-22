@@ -1,9 +1,9 @@
 import json
 import time
 import cv2
-from camera import Camera
-from motion_detector import MotionDetector
-from cat_classifier import CatClassifier
+from detector.camera import Camera
+from detector.motion_detector import MotionDetector
+from detector.cat_classifier import CatClassifier
 
 def get_detector_config(cam: Camera):
     with open('./config/detector.json', 'r') as config_file:

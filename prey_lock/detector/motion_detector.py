@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import sys
-from camera import Camera
+from detector.camera import Camera
 
 class MotionDetector():
     def __init__(self):
@@ -10,17 +10,17 @@ class MotionDetector():
         self.MOTION_THRESHOLD_PERCENT = .025
 
         self.debug = False
-        self.current_frame = None
-        self.prev_frame = None
+        self.bg_frame = None
+        self.compare_frame = None
 
         self.compare_ready = False
         self.kernel = np.ones((6, 6))
 
-    def load_frame(self, frame):
-        if self.current_frame is not None:
-            self.prev_frame = self.current_frame
+    def set_bg_frame(self, frame):
+        self.bg_frame = frame
 
-        self.current_frame = self.prepare_frame(frame) if frame is not None else frame
+    def set_compare_frame(self, frame):
+        self.compare_frame = self.prepare_frame(frame) if frame is not None else frame
 
     def prepare_frame(self, frame):
         frame_bw = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -29,10 +29,10 @@ class MotionDetector():
         return prepared_frame
 
     def get_threshold(self):
-        if self.prev_frame is None:
+        if self.bg_frame is None:
             return None
 
-        diff_frame = cv2.absdiff(self.prev_frame, self.current_frame)
+        diff_frame = cv2.absdiff(self.bg_frame, self.compare_frame)
         diff_frame = self.dilute(diff_frame)
 
         # Only take different areas that are different enough (>20 / 255)

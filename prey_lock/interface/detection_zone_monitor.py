@@ -8,8 +8,9 @@ from queue import Queue
 import time
 import json
 
-from detection_zone import DetectionZone
-from camera_feed import Camera
+from interface.detection_zone import DetectionZone
+from interface.camera_feed import Camera
+from detector.motion_detector import MotionDetector
 
 class DetectionZoneMonitor:
     CONFIG_PATH = "../config/detection_zone.json"    
@@ -17,6 +18,7 @@ class DetectionZoneMonitor:
     RESIZE_CNTRL_RAD = 10 # The radius of the resize controls
     CNTRL_TAG = 'dz_cntrl'
     DZ_COLOR = (150, 250, 150, 150)
+    DETECTION_RESET_TIME = 2 # In seconds
     
     def __init__(self, container) -> None:
         self.canvas = Canvas(container, background='#e8e9eb')
@@ -64,6 +66,10 @@ class DetectionZoneMonitor:
         self.cam_thread.daemon = True
         self.cam_thread.start()
 
+        self.detector: MotionDetector = MotionDetector()
+        self.detector_frame_cnt = 0
+        self.motion_detected = False
+
     def fetch_camera_frame(self):
         # Warm up the camera stream
         if not self.cam.frame_ready:
@@ -92,6 +98,22 @@ class DetectionZoneMonitor:
             self.canvas.delete(self.stream)
 
         self.stream = stream
+
+    def detect(self):
+        if self.detector_frame_cnt % (self.DETECTION_RESET_TIME * Camera.FPS) == 0:
+            self.detector.set_bg_frame(self.frame)
+            # Return --> we don't want to comparing here would always pass since we just reset the bg frame
+        else:
+            self.detector.set_compare_frame(self.frame)
+
+        self.detector_frame_cnt += 1
+
+        if self.detector.movement_detected():
+            self.motion_detected = True
+            print('Motion detected!')
+        else:
+            self.motion_detected = False
+
 
     def scale_detection_zone(self, event):
         self.detection_zone.update()
