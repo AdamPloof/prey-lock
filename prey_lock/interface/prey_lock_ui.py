@@ -49,7 +49,7 @@ class PreyLockUI:
 
     def stream_camera(self):
         self.detection_zone.refresh_monitor()
-        # self.detection_zone.detect()
+        self.detection_zone.detect()
         self.root.after(Camera.FPS_MS, self.stream_camera)
 
     def toggle_detection_zone_edit(self):

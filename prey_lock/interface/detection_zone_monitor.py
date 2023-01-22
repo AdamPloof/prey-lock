@@ -30,18 +30,6 @@ class DetectionZoneMonitor:
         self.drag_current_x: int = -1
         self.drag_current_y: int = -1
 
-        with open(self.CONFIG_PATH, 'r') as f:
-            config = json.load(f)
-
-        # detection_zone_coord coordinates normalized to 0.0 to 1.0 scale of current canvas size
-        # rather than absolute pixel values. E.g. topleft: (0, .5), height: .5, width: .5 would 
-        # a zone 1/2 the width and height of the canvas positioned on the left edge, halfway down the canvas.
-        self.dz_props = {
-            'topleft': tuple(config['top_left']),
-            'height': config['height'],
-            'width': config['height']
-        }
-
         self.detection_zone: DetectionZone = None
         self.resize_controls: dict = {
             'top': None,
@@ -67,6 +55,7 @@ class DetectionZoneMonitor:
         self.cam_thread.start()
 
         self.detector: MotionDetector = MotionDetector()
+        # self.detector.debug = True
         self.detector_frame_cnt = 0
         self.motion_detected = False
 
@@ -100,19 +89,40 @@ class DetectionZoneMonitor:
         self.stream = stream
 
     def detect(self):
+        if not self.detection_zone:
+            return
+
+        refresh_bg = False
+        frame = self.crop_frame(self.frame)
         if self.detector_frame_cnt % (self.DETECTION_RESET_TIME * Camera.FPS) == 0:
-            self.detector.set_bg_frame(self.frame)
-            # Return --> we don't want to comparing here would always pass since we just reset the bg frame
+            self.detector.set_bg_frame(frame)
+            refresh_bg = True
         else:
-            self.detector.set_compare_frame(self.frame)
+            self.detector.set_compare_frame(frame)
 
         self.detector_frame_cnt += 1
 
-        if self.detector.movement_detected():
+        if refresh_bg == True:
+            self.motion_detected = False
+        elif self.detector.movement_detected():
             self.motion_detected = True
-            print('Motion detected!')
         else:
             self.motion_detected = False
+
+    def crop_frame(self, frame: np.ndarray):
+        frame_shape = frame.shape
+        x1 = round(self.detection_zone.rel_topleft[0] * frame_shape[1])
+        y1 = round(self.detection_zone.rel_topleft[1] * frame_shape[0])
+        x2 = round((self.detection_zone.rel_topleft[0] + self.detection_zone.rel_width) * frame_shape[1])
+        y2 = round((self.detection_zone.rel_topleft[1] + self.detection_zone.rel_height) * frame_shape[0])
+
+        # Inspect the cropped frame
+        # cv2.imshow('Test Crop', frame[y1:y2, x1:x2])
+
+        # if cv2.waitKey(Camera.FPS_MS) == 27:
+        #     cv2.destroyAllWindows()
+
+        return frame[y1:y2, x1:x2]
 
 
     def scale_detection_zone(self, event):
@@ -299,7 +309,15 @@ class DetectionZoneMonitor:
         self.canvas.tag_bind(detection_zone_id, '<B1-Motion>', self.move_detection_zone)
 
     def load_detection_zone(self):
-        self.detection_zone = DetectionZone(self.canvas, self.dz_props['topleft'], self.dz_props['width'], self.dz_props['height'])
+        with open(self.CONFIG_PATH, 'r') as f:
+            config = json.load(f)
+
+        self.detection_zone = DetectionZone(
+            self.canvas,
+            tuple(config['top_left']),
+            config['width'],
+            config['height']
+        )
         self.detection_zone.draw()
         self.canvas.bind('<Configure>', self.scale_detection_zone)
         self.bind_detection_zone_events()

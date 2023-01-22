@@ -17,7 +17,7 @@ class MotionDetector():
         self.kernel = np.ones((6, 6))
 
     def set_bg_frame(self, frame):
-        self.bg_frame = frame
+        self.bg_frame = self.prepare_frame(frame) if frame is not None else frame
 
     def set_compare_frame(self, frame):
         self.compare_frame = self.prepare_frame(frame) if frame is not None else frame
@@ -32,11 +32,16 @@ class MotionDetector():
         if self.bg_frame is None:
             return None
 
-        diff_frame = cv2.absdiff(self.bg_frame, self.compare_frame)
-        diff_frame = self.dilute(diff_frame)
+        try:
+            diff_frame = cv2.absdiff(self.bg_frame, self.compare_frame)
+            diff_frame = self.dilute(diff_frame)
 
-        # Only take different areas that are different enough (>20 / 255)
-        thresh_frame = cv2.threshold(diff_frame, thresh=20, maxval=255, type=cv2.THRESH_BINARY)[1]
+            # Only take different areas that are different enough (>20 / 255)
+            thresh_frame = cv2.threshold(diff_frame, thresh=20, maxval=255, type=cv2.THRESH_BINARY)[1]
+        except cv2.error as e:
+            if self.debug:
+                print('Unable to compare frames of different dimensions')
+            return None
 
         return thresh_frame
 
