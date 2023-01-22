@@ -4,3 +4,4 @@ env.json
 classifier_test.py
 __pycache__/
 .vscode/
+config/detection_zone.json

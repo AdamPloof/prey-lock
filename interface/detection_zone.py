@@ -2,9 +2,11 @@ from tkinter import *
 from PIL import Image, ImageDraw, ImageTk
 from typing import Callable
 import numpy as np
+import json
 
 
 class DetectionZone:
+    CONFIG_PATH = '../config/detection_zone.json'
     MIN_WIDTH = 50
     MIN_HEIGHT = 50
     COLOR = (150, 250, 150, 150)
@@ -42,6 +44,13 @@ class DetectionZone:
             self.rel_topleft = props['topleft']
             self.rel_width = props['width']
             self.rel_height = props['height']
+
+            with open(self.CONFIG_PATH, 'w') as f:
+                json.dump({
+                    'top_left': self.rel_topleft,
+                    'width': self.rel_width,
+                    'height': self.rel_height
+                }, f)
         
         return wrapper
 

@@ -12,7 +12,7 @@ from detection_zone import DetectionZone
 from camera_feed import Camera
 
 class DetectionZoneMonitor:
-    
+    CONFIG_PATH = "../config/detection_zone.json"    
     RESIZE_MIN_THRESHOLD = 50 # The smallest the window can be resized to for each axis
     RESIZE_CNTRL_RAD = 10 # The radius of the resize controls
     CNTRL_TAG = 'dz_cntrl'
@@ -28,13 +28,16 @@ class DetectionZoneMonitor:
         self.drag_current_x: int = -1
         self.drag_current_y: int = -1
 
+        with open(self.CONFIG_PATH, 'r') as f:
+            config = json.load(f)
+
         # detection_zone_coord coordinates normalized to 0.0 to 1.0 scale of current canvas size
         # rather than absolute pixel values. E.g. topleft: (0, .5), height: .5, width: .5 would 
         # a zone 1/2 the width and height of the canvas positioned on the left edge, halfway down the canvas.
         self.dz_props = {
-            'topleft': (0.2, 0.2),
-            'height': .5,
-            'width': .5
+            'topleft': tuple(config['top_left']),
+            'height': config['height'],
+            'width': config['height']
         }
 
         self.detection_zone: DetectionZone = None
