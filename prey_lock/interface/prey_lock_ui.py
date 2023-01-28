@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import ttk
+import json
 
 from interface.detection_zone_monitor import DetectionZoneMonitor
 from interface.camera_feed import Camera
@@ -11,7 +12,14 @@ class PreyLockUI:
     def __init__(self) -> None:
         self.edit_zone_edit_active = False
         self.edit_zone_id = None
-        self.movement_status = None
+
+        with open(DetectionZoneMonitor.CONFIG_PATH, 'r') as f:
+            self.config = json.load(f)
+
+        # Can't initialize tk Vars until the root component is ready, so these are just placeholders.
+        # see build_ui for where these are initialized.
+        self.movement_status = None # tk.StringVar
+        self.sensitivity_val = None # tk.DoubleVar
 
         self.root = self.init_tk()
         self.build_ui()
@@ -50,12 +58,22 @@ class PreyLockUI:
         self.motion_detected_label = ttk.Label(mainframe, textvariable=self.movement_status)
         self.motion_detected_label.grid(row=5, stick=(N, E))
 
+        self.sensitivity_val = DoubleVar()
+        sense = self.config['sensitivity'] * 1000
+        self.sensitivity_val.set(sense)
         sensitivity_label = ttk.Label(mainframe, text="Sensitivity")
         sensitivity_label.grid(column=0, row=7, pady=(12, 0))
 
-        self.sensitivity = ttk.Scale(mainframe, orient=HORIZONTAL, length=200, from_=1.0, to=100.0)
+        self.sensitivity = ttk.Scale(
+            mainframe,
+            orient=HORIZONTAL,
+            length=200,
+            from_=1.0,
+            to=100.0,
+            variable=self.sensitivity_val,
+            command=self.set_sensitivity
+        )
         self.sensitivity.grid(column=0, row=8, sticky=(W, E), padx=120)
-        self.sensitivity.set(20)
 
     def stream_camera(self):
         self.detection_zone.refresh_monitor()
@@ -78,6 +96,19 @@ class PreyLockUI:
             self.movement_status.set('Motion detected!')
         else:
             self.movement_status.set('No motion detected!')
+
+    # Actual sensitivty range used by motion detector is between .001 and .1 but
+    # the scale widget's range is 1 to 100. So that's why we move the decimal place.
+    def set_sensitivity(self, e):
+        sense = self.sensitivity_val.get() / 1000
+        config_path = DetectionZoneMonitor.CONFIG_PATH
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+
+        config['sensitivity'] = sense
+
+        with open(config_path, 'w') as out:
+            json.dump(config, out)
 
     def run(self):
         self.root.mainloop()

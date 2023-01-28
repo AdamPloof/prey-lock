@@ -6,7 +6,7 @@
             "width": 2080,
             "height": 720
         },
-        "precent_change_threshold": 0.025,
+        "sensitivity": 0.025,
         "background_refresh_rate": 300
     }
 }
