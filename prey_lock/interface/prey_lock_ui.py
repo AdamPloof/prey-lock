@@ -44,6 +44,9 @@ class PreyLockUI:
         self.zone_select_btn = ttk.Button(mainframe, text='Edit Detection Zone', command=self.toggle_detection_zone_edit)
         self.zone_select_btn.grid(column=0, row=5, rowspan=2, sticky=(W, N))
 
+        self.capture_btn = ttk.Button(mainframe, text='Capture', command=self.capture_frame)
+        self.capture_btn.grid(column=0, row=5, rowspan=2, sticky=N)
+
         self.motion_detected_label = ttk.Label(mainframe, textvariable=self.movement_status)
         self.motion_detected_label.grid(row=5, stick=(N, E))
 
@@ -51,7 +54,7 @@ class PreyLockUI:
         sensitivity_label.grid(column=0, row=7, pady=(12, 0))
 
         self.sensitivity = ttk.Scale(mainframe, orient=HORIZONTAL, length=200, from_=1.0, to=100.0)
-        self.sensitivity.grid(column=0, row=8, sticky=(W, E), padx=40)
+        self.sensitivity.grid(column=0, row=8, sticky=(W, E), padx=120)
         self.sensitivity.set(20)
 
     def stream_camera(self):
@@ -66,6 +69,9 @@ class PreyLockUI:
         else:
             self.detection_zone.deactivate()
             self.edit_zone_edit_active = False
+
+    def capture_frame(self):
+        self.detection_zone.capture_frame()
 
     def update_detection_status(self, e):
         if self.detection_zone.motion_detected:

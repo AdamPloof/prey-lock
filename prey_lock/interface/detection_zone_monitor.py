@@ -5,6 +5,8 @@ import numpy as np
 import cv2
 import threading
 from queue import Queue
+from pathlib import Path
+from datetime import datetime
 import time
 import json
 
@@ -19,6 +21,7 @@ class DetectionZoneMonitor:
     CNTRL_TAG = 'dz_cntrl'
     DZ_COLOR = (150, 250, 150, 150)
     DETECTION_RESET_TIME = 2 # In seconds
+    CAPTURE_PATH = '../captured_images'
     
     def __init__(self, container) -> None:
         self.canvas = Canvas(container, background='#e8e9eb')
@@ -323,3 +326,8 @@ class DetectionZoneMonitor:
         self.detection_zone.draw()
         self.canvas.bind('<Configure>', self.scale_detection_zone)
         self.bind_detection_zone_events()
+
+    def capture_frame(self):
+        cap_file = Path(DetectionZoneMonitor.CAPTURE_PATH).joinpath(datetime.now().strftime('%Y%m%d%H%M%S') + 'capture.jpg')
+        print(f'Saving file: {cap_file}')
+        cv2.imwrite(filename=str(cap_file), img=self.frame)
