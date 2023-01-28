@@ -4,11 +4,8 @@ import sys
 from detector.camera import Camera
 
 class MotionDetector():
-    def __init__(self):
-        self.CONTOUR_SIZE_THRESH = 50
-        # The percentage of pixels in the image that have "moved" at which motion is considered detected.
-        self.MOTION_THRESHOLD_PERCENT = .025
-
+    def __init__(self, sensitivity):
+        self.sensitivity = sensitivity
         self.debug = False
         self.bg_frame = None
         self.compare_frame = None
@@ -69,12 +66,12 @@ class MotionDetector():
         percent_moved = pixels_moved / thresh_frame.size
 
         if self.debug:
-            if percent_moved > self.MOTION_THRESHOLD_PERCENT:
+            if percent_moved > self.sensitivity:
                 print('Motion detected. Percent moved: ' + str(percent_moved))
             else:
                 print('No motion detected. Percent moved: ' + str(percent_moved))
 
-        return percent_moved > self.MOTION_THRESHOLD_PERCENT
+        return percent_moved > self.sensitivity
 
 
     def clean_up(self):

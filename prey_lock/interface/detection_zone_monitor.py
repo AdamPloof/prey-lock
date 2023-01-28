@@ -57,7 +57,10 @@ class DetectionZoneMonitor:
         self.cam_thread.daemon = True
         self.cam_thread.start()
 
-        self.detector: MotionDetector = MotionDetector()
+        with open(self.CONFIG_PATH, 'r') as f:
+            config = json.load(f)
+
+        self.detector: MotionDetector = MotionDetector(config['sensitivity'])
         # self.detector.debug = True
         self.detector_frame_cnt = 0
         self.motion_detected = False
@@ -326,6 +329,9 @@ class DetectionZoneMonitor:
         self.detection_zone.draw()
         self.canvas.bind('<Configure>', self.scale_detection_zone)
         self.bind_detection_zone_events()
+
+    def set_detector_sensitivity(self, sensitivity):
+        self.detector.sensitivity = sensitivity
 
     def capture_frame(self):
         cap_file = Path(DetectionZoneMonitor.CAPTURE_PATH).joinpath(datetime.now().strftime('%Y%m%d%H%M%S') + 'capture.jpg')

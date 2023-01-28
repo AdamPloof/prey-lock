@@ -62,18 +62,21 @@ class PreyLockUI:
         sense = self.config['sensitivity'] * 1000
         self.sensitivity_val.set(sense)
         sensitivity_label = ttk.Label(mainframe, text="Sensitivity")
-        sensitivity_label.grid(column=0, row=7, pady=(12, 0))
+        sensitivity_label.grid(column=0, row=7, pady=(12, 0), sticky=W)
 
         self.sensitivity = ttk.Scale(
             mainframe,
             orient=HORIZONTAL,
-            length=200,
+            length=400,
             from_=1.0,
             to=100.0,
             variable=self.sensitivity_val,
             command=self.set_sensitivity
         )
-        self.sensitivity.grid(column=0, row=8, sticky=(W, E), padx=120)
+        self.sensitivity.grid(column=0, row=8, columnspan=8, sticky=W)
+
+        sensitivity_amt_label = ttk.Label(mainframe, textvariable=self.sensitivity_val)
+        sensitivity_amt_label.grid(column=0, row=8, sticky=E)
 
     def stream_camera(self):
         self.detection_zone.refresh_monitor()
@@ -101,6 +104,8 @@ class PreyLockUI:
     # the scale widget's range is 1 to 100. So that's why we move the decimal place.
     def set_sensitivity(self, e):
         sense = self.sensitivity_val.get() / 1000
+        self.detection_zone.set_detector_sensitivity(sense)
+
         config_path = DetectionZoneMonitor.CONFIG_PATH
         with open(config_path, 'r') as f:
             config = json.load(f)
