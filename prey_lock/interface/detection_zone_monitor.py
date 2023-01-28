@@ -109,6 +109,8 @@ class DetectionZoneMonitor:
         else:
             self.motion_detected = False
 
+        self.canvas.master.event_generate("<<detect>>")
+
     def crop_frame(self, frame: np.ndarray):
         frame_shape = frame.shape
         x1 = round(self.detection_zone.rel_topleft[0] * frame_shape[1])

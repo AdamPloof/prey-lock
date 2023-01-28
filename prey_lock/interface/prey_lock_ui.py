@@ -11,6 +11,7 @@ class PreyLockUI:
     def __init__(self) -> None:
         self.edit_zone_edit_active = False
         self.edit_zone_id = None
+        self.movement_status = None
 
         self.root = self.init_tk()
         self.build_ui()
@@ -32,12 +33,18 @@ class PreyLockUI:
         mainframe.rowconfigure(5, pad=12)
         mainframe.rowconfigure(0, weight=1)
 
+        # Binding detection events to mainframe even though the event is dispatched by the detector so that
+        # we bubble the event up.
+        self.movement_status = StringVar()
+        self.movement_status.set('No motion detected')
+        mainframe.bind("<<detect>>", self.update_detection_status)
+
         self.detection_zone = DetectionZoneMonitor(mainframe)
 
         self.zone_select_btn = ttk.Button(mainframe, text='Edit Detection Zone', command=self.toggle_detection_zone_edit)
         self.zone_select_btn.grid(column=0, row=5, rowspan=2, sticky=(W, N))
 
-        self.motion_detected_label = ttk.Label(mainframe, text='No motion detected')
+        self.motion_detected_label = ttk.Label(mainframe, textvariable=self.movement_status)
         self.motion_detected_label.grid(row=5, stick=(N, E))
 
         sensitivity_label = ttk.Label(mainframe, text="Sensitivity")
@@ -59,6 +66,12 @@ class PreyLockUI:
         else:
             self.detection_zone.deactivate()
             self.edit_zone_edit_active = False
+
+    def update_detection_status(self, e):
+        if self.detection_zone.motion_detected:
+            self.movement_status.set('Motion detected!')
+        else:
+            self.movement_status.set('No motion detected!')
 
     def run(self):
         self.root.mainloop()
