@@ -1,7 +1,7 @@
-from gatherer.gather import Gatherer
+from collector.collector import Collector
 
 def main():
-    gatherer = Gatherer()
+    gatherer = Collector()
     gatherer.run()
 
 if __name__ == "__main__":

@@ -7,8 +7,12 @@ name = "pypi"
 pillow = "*"
 opencv-python = "<=4.6.0.66"
 debugpy = "*"
+google-api-python-client = "*"
+google-auth-httplib2 = "*"
+google-auth-oauthlib = "*"
+google-auth = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.9"
+python_version = "3.11"

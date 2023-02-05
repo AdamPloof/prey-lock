@@ -5,3 +5,4 @@ classifier_test.py
 __pycache__/
 .vscode/
 config/detection_zone.json
+prey_lock/google_drive/auth/
