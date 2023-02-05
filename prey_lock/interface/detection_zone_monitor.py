@@ -11,7 +11,7 @@ import time
 import json
 
 from interface.detection_zone import DetectionZone
-from interface.camera_feed import Camera
+from detector.camera import Camera
 from detector.motion_detector import MotionDetector
 
 class DetectionZoneMonitor:

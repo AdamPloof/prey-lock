@@ -3,7 +3,7 @@ from tkinter import ttk
 import json
 
 from interface.detection_zone_monitor import DetectionZoneMonitor
-from interface.camera_feed import Camera
+from detector.camera import Camera
 
 class PreyLockUI:
     DEFAULT_WINDOW_SIZE = "800x600"
