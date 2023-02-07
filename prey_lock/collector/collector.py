@@ -5,15 +5,19 @@ Run as a daemon for gathering sample images for training.
 import cv2
 import numpy as np
 import time
+from datetime import datetime
 import json
+import os
 from pathlib import Path
 
 from detector.camera import Camera
 from detector.motion_detector import MotionDetector
+from google_drive.drive import Drive
 
 class Collector:
     CONFIG_PATH = "../config/detection_zone.json"    
-    CAPTURE_PATH = '../captured_images'
+    TEMP_PATH = "./collector/temp"
+    UPLOAD_FREQUENCY = 60 # in seconds
     
     def __init__(self) -> None:
         with open('../env.json') as env_file:
@@ -22,12 +26,14 @@ class Collector:
         RTSP = f"rtsp://{env['USER']}:{env['PASS']}@{env['RTSP_URL']}"
 
         self.cam: Camera = Camera(RTSP)
+        self.drive = Drive()
 
         with open(self.CONFIG_PATH, 'r') as config_file:
             self.config = json.load(config_file)
         
         self.detector: MotionDetector = MotionDetector(self.config['sensitivity'])
         self.bg_reset_frames = Camera.FPS
+        self.last_upload_time = None
 
     def crop_frame(self, frame: np.ndarray):
         frame_shape = frame.shape
@@ -39,17 +45,31 @@ class Collector:
         return frame[y1:y2, x1:x2]
 
     def get_img_filename(self) -> str:
-        return Path(self.CAPTURE_PATH).joinpath(str(time.time()) + '_capture.jpg')
+        return Path(self.TEMP_PATH).joinpath(str(time.time()) + '_capture.jpg')
 
-    # TODO: Periodically check file storage to make sure we're not exceeding a reasonable space threshold.
     def upload_img(self, frame):
-        pass
+        if self.last_upload_time is not None:
+            now = datetime.now()
+            diff = now - self.last_upload_time
 
-    def save_image(self, frame):
-        print('Saving: ' + self.get_img_filename())
-        # cv2.imwrite(filename=self.get_img_filename(), img=frame)
+            if diff.total_seconds < self.UPLOAD_FREQUENCY:
+                return
 
-    # TODO: Restrict frequency of save on detect motion by time.
+        self.last_upload_time = datetime.now()
+        img_path = self.save_image(frame)
+        try:
+            self.drive.upload_file(img_path)
+        except Exception as e:
+            # TODO: Create custom exception for capacity errors and log
+            print(e)
+        finally:
+            os.remove(img_path)
+
+    def save_image(self, frame) -> str:
+        filename = self.get_img_filename()
+        cv2.imwrite(filename=filename, img=frame)
+        return filename
+
     def run(self):
         if not self.cam.frame_ready:
             # Warm up the camera stream
@@ -69,7 +89,6 @@ class Collector:
 
             self.detector.set_compare_frame(frame)
             if self.detector.movement_detected():
-                self.save_image(frame)
+                self.upload_img(frame)
 
             processed_cnt += 1
-

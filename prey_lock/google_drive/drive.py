@@ -16,31 +16,49 @@ from googleapiclient.errors import HttpError
 class Drive:
     SCOPES = ['https://www.googleapis.com/auth/drive.file']
     ROOT = os.path.dirname(os.path.abspath(__file__))
+    DRIVE_CAPACITY = 2000 # Max number of files allowed to be stored in the drive
 
     def __init__(self) -> None:
         with open('../env.json', 'r') as env_file:
             env = json.load(env_file)
 
+        self.training_location_id = env['TRAINING_LOCATION_ID']
         service_file = env['SERVICE_FILENAME']
+
         service = os.path.join(self.ROOT, 'auth', service_file)
         credentials = service_account.Credentials.from_service_account_file(service, scopes=self.SCOPES)
         self.drive = build('drive', 'v3', credentials=credentials)
-        self.training_location_id = env['TRAINING_LOCATION_ID']
 
-    def check_file_capacity(self):
-        pass
+    def over_capacity(self):
+        files = self.drive.files()
+        request = files.list(
+            corpora='user',
+            supportsAllDrives=True,
+            # driveId=self.training_location_id,
+            q='trashed = false',
+            includeItemsFromAllDrives=True
+        )
+        file_cnt = 0
+        while request is not None:
+            res = request.execute()
+            file_cnt += len(res['files'])
+            request = files.list_next(request, res)
+
+        return file_cnt <= self.DRIVE_CAPACITY
+
 
     def upload_file(self, filepath):
-        test_filepath = os.path.join(self.ROOT, 'test_upload.txt')
+        if self.over_capacity():
+            raise Exception('There is no room to store additional images in the selected location.')
+
         metadata = {
-            'name': 'test_upload.txt',
+            'name': filepath,
             'parents': [self.training_location_id]
         }
-        media = MediaFileUpload(test_filepath, 'text/plain')
+        media = MediaFileUpload(filepath, 'image/jpeg')
 
         try:
             file = self.drive.files().create(
-                # uploadType='media',
                 body=metadata,
                 media_body=media,
                 fields='id'
