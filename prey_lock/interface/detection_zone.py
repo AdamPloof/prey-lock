@@ -1,6 +1,7 @@
 from tkinter import *
 from PIL import Image, ImageDraw, ImageTk
 from typing import Callable
+import datetime
 import numpy as np
 import json
 
@@ -44,13 +45,15 @@ class DetectionZone:
             self.rel_topleft = props['topleft']
             self.rel_width = props['width']
             self.rel_height = props['height']
+            last_updated = datetime.datetime.now()
 
             with open(self.CONFIG_PATH, 'w') as f:
                 json.dump({
                     'top_left': self.rel_topleft,
                     'width': self.rel_width,
-                    'height': self.rel_height
-                }, f)
+                    'height': self.rel_height,
+                    'last_updated': last_updated.strftime('%Y-%m-%d %H:%M:%S'),
+                }, f, indent=4)
         
         return wrapper
 

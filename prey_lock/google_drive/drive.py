@@ -2,10 +2,9 @@
 Connect to Google Drive API for uploading training data
 """
 
-from __future__ import print_function
-
 import os.path
 import json
+import logging
 from pathlib import Path
 
 from google.oauth2 import service_account
@@ -63,16 +62,16 @@ class Drive:
                 media_body=media,
                 fields='id'
             ).execute()
-            print(f'File ID: {file.get("id")}')
+            logging.info(f'Uploaded File ID: {file.get("id")}')
         except HttpError as e:
-            print(f'An error occurred: {e}')
+            logging.error(e)
             file = None
 
         return file.get('id')
 
 def main():
     drive_bot = Drive()
-    drive_bot.upload_file('')
+    drive_bot.upload_file('test.txt')
 
 if __name__ == '__main__':
     main()

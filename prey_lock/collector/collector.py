@@ -5,7 +5,8 @@ Run as a daemon for gathering sample images for training.
 import cv2
 import numpy as np
 import time
-from datetime import datetime
+import datetime
+import logging
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ class Collector:
     CONFIG_PATH = "../config/detection_zone.json"    
     TEMP_PATH = "./collector/temp"
     UPLOAD_FREQUENCY = 60 # in seconds
+    CAMERA_POS_UPDATE_FREQ = 14 # in days
     
     def __init__(self) -> None:
         with open('../env.json') as env_file:
@@ -44,24 +46,35 @@ class Collector:
 
         return frame[y1:y2, x1:x2]
 
+    def settings_stale(self) -> bool:
+        last_updated = datetime.datetime.strptime(self.config['last_updated'], '%Y-%m-%d %H:%M:%S')
+        now = datetime.datetime.now()
+        update_freq = datetime.timedelta(days=self.CAMERA_POS_UPDATE_FREQ)
+        
+        return (now - last_updated) > update_freq
+
     def get_img_filename(self) -> str:
         return Path(self.TEMP_PATH).joinpath(str(time.time()) + '_capture.jpg')
 
     def upload_img(self, frame):
+        if self.settings_stale():
+            logging.warning("Skipping upload. The camera hasn't moved recently.")
+            return
+
         if self.last_upload_time is not None:
-            now = datetime.now()
+            now = datetime.datetime.now()
             diff = now - self.last_upload_time
 
             if diff.total_seconds < self.UPLOAD_FREQUENCY:
                 return
 
-        self.last_upload_time = datetime.now()
+        self.last_upload_time = datetime.datetime.now()
         img_path = self.save_image(frame)
         try:
             self.drive.upload_file(img_path)
         except Exception as e:
             # TODO: Create custom exception for capacity errors and log
-            print(e)
+            logging.error(e)
         finally:
             os.remove(img_path)
 
